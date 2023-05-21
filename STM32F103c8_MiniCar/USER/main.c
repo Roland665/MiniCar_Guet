@@ -19,7 +19,7 @@
 /*最多可以存储 3 个 u8类型变量的队列 */
 #define WIRELESSCOMMAND_QUEUE_LENGTH 3
 #define WIRELESSCOMMAND_ITEM_SIZE sizeof(u8)
-/**************************** 任务句柄 ********************************/L。
+/**************************** 任务句柄 ********************************/
 /* AppTaskCreate 任务句柄 */
 static TaskHandle_t AppTaskCreate_Handle = NULL;
 /* LED 任务句柄 */
@@ -38,6 +38,10 @@ static TaskHandle_t rCalcVelocity_Task_Handle = NULL;
 static TaskHandle_t AnalyseCommand_Task_Handle = NULL;
 /* PIDCalculator 任务句柄*/
 static TaskHandle_t PIDCalculator_Task_Handle = NULL;
+/* Tracking 任务句柄*/
+static TaskHandle_t Tracking_Task_Handle = NULL;
+/* Selfcruising 任务句柄*/
+static TaskHandle_t Selfcruising_Task_Handle = NULL;
 /********************************** 内核对象句柄 *********************************/
 static SemaphoreHandle_t printfSemphr_Handle = NULL;/* 串口打印互斥信号量句柄*/
 
@@ -61,8 +65,6 @@ static StaticTask_t Timer_Task_TCB;
 static StackType_t AppTaskCreate_Stack[128];
 /* LED 任务堆栈 */
 static StackType_t LED_Task_Stack[128];
-/* KeyScan 任务堆栈 */
-//static StackType_t KeyScan_Task_Stack[128];
 /* Motor 任务堆栈 */
 static StackType_t Motor_Task_Stack[128];
 /* ListeningSensors 任务堆栈 */
@@ -75,13 +77,15 @@ static StackType_t rCalcVelocity_Task_Stack[128];
 static StackType_t AnalyseCommand_Task_Stack[128];
 /* PIDCalculator 任务堆栈 */
 static StackType_t PIDCalculator_Task_Stack[128];
+/* Selfcruising 任务堆栈 */
+static StackType_t Selfcruising_Task_Stack[128];
+/* Tracking 任务堆栈 */
+static StackType_t Tracking_Task_Stack[128];
 
 /* AppTaskCreate 任务控制块 */
 static StaticTask_t AppTaskCreate_TCB;
 /* LED 任务控制块 */
 static StaticTask_t LED_Task_TCB;
-/* KeyScan 任务控制块 */
-//static StaticTask_t KeyScan_Task_TCB;
 /* Motor 任务控制块 */
 static StaticTask_t Motor_Task_TCB;
 /* ListeningSensors 任务控制块 */
@@ -94,6 +98,10 @@ static StaticTask_t rCalcVelocity_Task_TCB;
 static StaticTask_t AnalyseCommand_Task_TCB;
 /* PIDCalculator 任务控制块 */
 static StaticTask_t PIDCalculator_Task_TCB;
+/* Selfcruising 任务控制块 */
+static StaticTask_t Selfcruising_Task_TCB;
+/* Tracking 任务控制块 */
+static StaticTask_t Tracking_Task_TCB;
 
 
 /* 信号量数据结构指针 */
@@ -123,16 +131,20 @@ u16 lTime = 0;//左轮1脉冲计时
 u16 rTime = 0;//右轮1脉冲计时
 
 u16 PWMVal[2] = {0};
+
+u8 carMode = 0;//小车运行模式 0-受Zigbee协调器控制 1-受循迹外设控制
 /*
 *************************************************************************
 *                             函数声明
 *************************************************************************
+*/
 void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, 
 								   StackType_t **ppxIdleTaskStackBuffer, 
 								   uint32_t *pulIdleTaskStackSize);
 void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, 
 									StackType_t **ppxTimerTaskStackBuffer, 
 									uint32_t *pulTimerTaskStackSize);
+
 static void xPrintf(char *format, ...);
 portFLOAT Filter(portFLOAT newValue, portFLOAT oldValue, portFLOAT alpha);
 static void AppTaskCreate(void);/* 用于创建任务 */
@@ -143,7 +155,9 @@ static void ListeningSensors_Task(void* parameter);//监听两个测速传感器
 static void lCalcVelocity_Task(void* parameter);//计算左轮速度任务
 static void rCalcVelocity_Task(void* parameter);//计算右轮速度任务
 static void AnalyseCommand_Task(void* parameter);//分析命令任务
-static void PIDCalculator_Task(void* parameter);//分析命令任务
+static void PIDCalculator_Task(void* parameter);//PID计算任务
+static void Selfcruising_Task(void* parameter);//自巡航任务
+static void Tracking_Task(void* parameter);//自巡航任务
 static void Setup(void);/* 用于初始化板载相关资源 */
 
 
@@ -324,8 +338,21 @@ static void AppTaskCreate(void){
 		printf("PIDCalculator任务创建成功!\r\n");
 	else
 		printf("PIDCalculator任务创建失败!\r\n");
+	
+	/* 创建 Selfcruising_Task 任务 */
+	Selfcruising_Task_Handle = xTaskCreateStatic((TaskFunction_t	)Selfcruising_Task,			//任务函数
+                                        (const char* 	)"Selfcruising_Task",		//任务名称
+                                        (uint32_t 		)128,				//任务栈深
+                                        (void* 		  	)NULL,				//传递给任务函数的参数
+                                        (UBaseType_t 	)4, 				//任务优先级
+                                        (StackType_t*   )Selfcruising_Task_Stack,	//任务堆栈
+                                        (StaticTask_t*  )&Selfcruising_Task_TCB);	//任务控制块   
+	if(Selfcruising_Task_Handle != NULL)/* 创建成功 */
+		printf("Selfcruising任务创建成功!\r\n");
+	else
+		printf("Selfcruising任务创建失败!\r\n");
 
-	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务
+	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务 
 	vTaskSuspend(Motor_Task_Handle);//挂起电机任务，因为车还没启动
 	vTaskSuspend(lCalcVelocity_Task_Handle);//挂起测速任务，因为车还没启动
 	vTaskSuspend(rCalcVelocity_Task_Handle);//挂起测速任务，因为车还没启动
@@ -335,23 +362,102 @@ static void AppTaskCreate(void){
 
 /**
 
-  * @brief PID计算器 任务主体
-  * @brief 时刻计算需要计算的数据   
+  * @brief 循迹 任务主体
+  * @brief  
   * @param    
   * @retval    
   */
+static void Tracking_Task(void* parameter);//自巡航任务
+
+
+/**
+
+  * @brief 自巡航 任务主体
+  */
+u8 trackingFlag = 0x11;
+static void Selfcruising_Task(void* parameter){
+	while(1){
+		if(carMode == 1){
+			if(trackingFlag == 0x11){//0b10001
+				//保持1m/s直行
+				if(lTargetV == 0 && rTargetV == 0){
+					lTargetV = rTargetV = 1;//这里不拉到1，是因为如果拉到1会导致下面的第一个elseif会被高概率执行
+				}
+				else if(lTargetV == 1 && rTargetV == 1){
+					if(lVelocity < rVelocity){
+						rTargetV -= 0.01;
+					}
+					else if(rVelocity < lVelocity){
+						lTargetV -= 0.01;
+					}
+				}
+				else if(lTargetV < 1 || rTargetV < 1 ){
+					if(lVelocity < rVelocity){
+						lTargetV += 0.01;
+					}
+					else if(rVelocity < lVelocity){
+						rTargetV += 0.01;
+					}
+				}
+				if(lTargetV > 1){
+					lTargetV = 1;
+				}
+				if(rTargetV > 1){
+					rTargetV = 1;
+				}
+			}
+			else if(trackingFlag == 0x13 || trackingFlag == 0x03 || trackingFlag == 0x02){//0b10011 0b00011 0b00010
+				//小左转
+				vTaskDelay(10);
+				if(lTargetV > 0){
+					lTargetV -= 0.03;
+					rTargetV -= 0.01;
+				}
+			}
+			else if(trackingFlag == 0x07 || trackingFlag == 0x06 || trackingFlag == 0x04){//0b00111 0b00110 0b00100
+				//大左转
+				vTaskDelay(10);
+				if(lTargetV > 0){
+					lTargetV -= 0.05;
+					rTargetV -= 0.02;
+				}
+			}
+			else if(trackingFlag == 0x15 || trackingFlag == 0x18 || trackingFlag == 0x08){//0b11001 0b11000 0b01000
+				//小右转
+			}
+			else if(trackingFlag == 0x1C || trackingFlag == 0x0C){//0b11100 0b01100
+				//大右转
+			}
+		}
+	}
+}
+
+/**
+
+  * @brief PID计算器 任务主体
+  * @brief 时刻计算需要计算的数据
+  */
 static void PIDCalculator_Task(void* parameter){
-	float kp = 0.5;
-	float ki = 0.01;
-	float kd = 0;
+	float kp = 0.3141592535;
+	float ki = 0.0000005;
+	float kd = 0.3141592535;
 	PID* lVelocityPID = PID_Create_Object(kp,ki,kd);
 	PID* rVelocityPID = PID_Create_Object(kp,ki,kd);
 	while(1){
-		if(lTargetV != lReplaceV){
-			lReplaceV += PID_Classic(lVelocityPID, lTargetV-lReplaceV);
+		if(lTargetV >= 0.01 || rTargetV >= 0.01){
+			if(rTargetV != lVelocity){
+				rReplaceV = rVelocity + PID_Classic(rVelocityPID, rTargetV-rVelocity);
+			}
+			if(lTargetV != lVelocity){
+				lReplaceV = lVelocity + PID_Classic(lVelocityPID, lTargetV-lVelocity);
+			}
 		}
-		if(rTargetV != rReplaceV){
-			rReplaceV += PID_Classic(rVelocityPID, rTargetV-rReplaceV);
+		else{
+			//停车了，那就清空PID对象
+			rVelocityPID->intergral = 0;
+			rVelocityPID->err_old = 0;
+			lVelocityPID->intergral = 0;
+			lVelocityPID->err_old = 0;
 		}
 	}
 }
@@ -359,8 +465,6 @@ static void PIDCalculator_Task(void* parameter){
 
 /**
   * @brief    分析控制命令任务主体
-  * @param    parameter
-  * @retval   void
   */
 static void AnalyseCommand_Task(void* parameter){
 	BaseType_t xReturn = pdPASS;
@@ -375,6 +479,9 @@ static void AnalyseCommand_Task(void* parameter){
 		printf("成功接收控制命令：%d\r\n",commands[1]);
 		
 		if(commands[0] == 0x00){
+			carMode = 0;
+			lTargetV = 0;
+			rTargetV = 0;
 			xPrintf("停车~\r\n");
 			vTaskSuspend(lCalcVelocity_Task_Handle);//挂起测速任务，因为车还没启动
 			vTaskSuspend(rCalcVelocity_Task_Handle);//挂起测速任务，因为车还没启动
@@ -384,27 +491,31 @@ static void AnalyseCommand_Task(void* parameter){
 			MTREN(TIM3,0);
 			lVelocity = 0;
 			rVelocity = 0;
-			lTargetV = 0;
-			rTargetV = 0;
 			vTaskSuspend(Motor_Task_Handle);//挂起电机任务，因为车还没启动
 		}
-		else if(commands[0] == 0x01){
+		else if(commands[0] == 0x01){		
 			if(commands[1] == 0){
-				printf("开车失败，速度需大于0~\r\n");
+				printf("切换失败，速度需大于0~\r\n");
 			}
 			else{
 				lTargetV = commands[1]/100 + (commands[1]%100)*0.01;
-				rTargetV = lTargetV;
+				rTargetV = commands[2]/100 + (commands[2]%100)*0.01;
 				printf("开车！目标车速：%.2lfm/s\r\n",lTargetV);
+			}
+		}
+		else if(commands[0] == 0x02){
+			if(carMode == 0){	
+				lTargetV = commands[1]/100 + (commands[1]%100)*0.01;
+				rTargetV = commands[2]/100 + (commands[2]%100)*0.01;
+				printf("调速成功~左右车轮目标车速为：%.2lfm/s  %.2lfm/s\r\n",lTargetV,rTargetV);
 				vTaskResume(lCalcVelocity_Task_Handle);//解挂测速任务，车已启动
 				vTaskResume(rCalcVelocity_Task_Handle);//解挂测速任务，车已启动
 				vTaskResume(Motor_Task_Handle);//解挂电机任务
 			}
 		}
-		else if(commands[0] == 0x02){
-			lTargetV = commands[1]/100 + (commands[1]%100)*0.01;
-			rTargetV = commands[2]/100 + (commands[2]%100)*0.01;
-			printf("调速成功~左右车轮目标车速为：%.2lfm/s  %.2lfm/s\r\n",lTargetV,rTargetV);
+		else if(commands[0] == 0x03){
+			carMode = 1;
+			printf("开车！自巡航模式\r\n");
 			vTaskResume(lCalcVelocity_Task_Handle);//解挂测速任务，车已启动
 			vTaskResume(rCalcVelocity_Task_Handle);//解挂测速任务，车已启动
 			vTaskResume(Motor_Task_Handle);//解挂电机任务
@@ -412,17 +523,17 @@ static void AnalyseCommand_Task(void* parameter){
 	}
 }
 
-float filterNum = 0.01f;
+float filterNum = 0.05f;
 /**
   * @brief    计算速度任务主体
   * @brief    计算每秒测速传感器
-  * @param    parameter
-  * @retval   void
   */
 static void lCalcVelocity_Task(void* parameter){
 	u16 lCounter = 0;
 	u16 i;
 	while(1){
+//		vTaskSuspend(Motor_Task_Handle);
+//		vTaskSuspend(PIDCalculator_Task_Handle);
 		xSemaphoreTake(vSensorLCountHandle,portMAX_DELAY);
 		lCounter = uxSemaphoreGetCount(vSensorLCountHandle);
 		for(i = 0; i < lCounter; i++){
@@ -432,14 +543,13 @@ static void lCalcVelocity_Task(void* parameter){
 		//计算两个轮子的速度
 		lVelocity = Filter((ONEPULSEDISTANCE * lCounter * 1000) / lTime, lVelocity, filterNum);
 		lTime = 0;
+///		vTaskResume(PIDCalculator_Task_Handle);
 	}
 }
 
 /**
   * @brief    计算速度任务主体
   * @brief    计算每秒测速传感器
-  * @param    parameter
-  * @retval   void
   */
 static void rCalcVelocity_Task(void* parameter){
 	u16 rCounter;
@@ -493,26 +603,27 @@ static void ListeningSensors_Task(void* parameter){
   */
 
 static void Motor_Task(void* parameter){
+	float ignoreErr = 0.1;//忽视速度上的误差值，硬件问题没办法
 	while(1){
-		vTaskDelay(1);
-		if(lReplaceV < lVelocity && PWMVal[0] > 0){
+		vTaskDelay(10);
+		if(lReplaceV < lVelocity-ignoreErr && PWMVal[0] > 0){
 			PWMVal[0]--;
 			MTLEN(TIM3,PWMVal[0]);
 		}
-		else if(lReplaceV > lVelocity && PWMVal[0] < 100){
+		else if(lReplaceV > lVelocity+ignoreErr && PWMVal[0] < 100){
 			PWMVal[0]++;
 			MTLEN(TIM3,PWMVal[0]);
 		}
 
-		if(rReplaceV < rVelocity && PWMVal[1] > 0){
+		if(rReplaceV < rVelocity-ignoreErr && PWMVal[1] > 0){
 			PWMVal[1]--;
 			MTREN(TIM3,PWMVal[1]);
 		}
-		else if(rReplaceV > rVelocity && PWMVal[1] < 100){
+		else if(rReplaceV > rVelocity+ignoreErr && PWMVal[1] < 100){
 			PWMVal[1]++;
 			MTREN(TIM3,PWMVal[1]);
 		}
-		printf("左轮速度为:%lfm/s  右轮速度为:%lfm/s\r\n",lVelocity,rVelocity);
+		printf("左轮速度为:%.2fm/s  右轮速度为:%.2fm/s  左轮待替换速度为:%.2fm/s  右轮待替换速度为:%.2fm/s\r\n",lVelocity,rVelocity,lReplaceV,rReplaceV);
 	}
 }
 
@@ -647,9 +758,9 @@ void TIM2_IRQHandler(void){
 	if(TIM_GetITStatus(TIM2,TIM_IT_Update)==SET){ //溢出中断
 		lTime++;
 		rTime++;
-		if(lTime == 500)
+		if(lTime == 300)
 			lVelocity = 0;
-		if(rTime == 500)
+		if(rTime == 300)
 			rVelocity = 0;
 		if(usart1RXTime == 10){
 			//测试，会将串口收到的所有内容返回

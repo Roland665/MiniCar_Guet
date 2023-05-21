@@ -27,7 +27,6 @@ PID* PID_Create_Object(float kp, float ki, float kd){
  * @param    err_new:最新的差值
  * @retval   
  */
-
 float PID_Classic(PID* pid, float err_new){
     float result;
     pid->err_new = err_new;
