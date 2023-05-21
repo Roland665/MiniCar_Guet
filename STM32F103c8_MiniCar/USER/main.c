@@ -12,20 +12,14 @@
 #include "PID.h"
 
 /******************************* 宏定义 ************************************/
-
 /*最多可以存储 2 个 u8类型变量的队列 */
 #define REPLACE_V_QUEUE_LENGTH 2
 #define REPLACE_V_ITEM_SIZE sizeof(u8)
 
-/*最多可以存储 1 个 u8类型变量的队列 */
+/*最多可以存储 3 个 u8类型变量的队列 */
 #define WIRELESSCOMMAND_QUEUE_LENGTH 3
 #define WIRELESSCOMMAND_ITEM_SIZE sizeof(u8)
-/**************************** 任务句柄 ********************************/
-/* 
- * 任务句柄是一个指针，用于指向一个任务，当任务创建好之后，它就具有了一个任务句柄
- * 以后我们要想操作这个任务都需要通过这个任务句柄，如果是自身的任务操作自己，那么
- * 这个句柄可以为NULL。
- */
+/**************************** 任务句柄 ********************************/L。
 /* AppTaskCreate 任务句柄 */
 static TaskHandle_t AppTaskCreate_Handle = NULL;
 /* LED 任务句柄 */
@@ -45,16 +39,6 @@ static TaskHandle_t AnalyseCommand_Task_Handle = NULL;
 /* PIDCalculator 任务句柄*/
 static TaskHandle_t PIDCalculator_Task_Handle = NULL;
 /********************************** 内核对象句柄 *********************************/
-/*
- * 信号量，消息队列，事件标志组，软件定时器这些都属于内核的对象，要想使用这些内核
- * 对象，必须先创建，创建成功之后会返回一个相应的句柄。实际上就是一个指针，后续我
- * 们就可以通过这个句柄操作这些内核对象。
- *
- * 内核对象说白了就是一种全局的数据结构，通过这些数据结构我们可以实现任务间的通信，
- * 任务间的事件同步等各种功能。至于这些功能的实现我们是通过调用这些内核对象的函数
- * 来完成的
- * 
- */
 static SemaphoreHandle_t printfSemphr_Handle = NULL;/* 串口打印互斥信号量句柄*/
 
 static SemaphoreHandle_t vSensorLCountHandle = NULL;//左测速传感器计数信号量句柄
@@ -143,11 +127,6 @@ u16 PWMVal[2] = {0};
 *************************************************************************
 *                             函数声明
 *************************************************************************
-*/
-/*
- * 使用了静态分配内存，以下这两个函数是由用户实现，函数在task.c文件中有引用
- *	当且仅当 configSUPPORT_STATIC_ALLOCATION 这个宏定义为 1 的时候才有效
- */
 void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, 
 								   StackType_t **ppxIdleTaskStackBuffer, 
 								   uint32_t *pulIdleTaskStackSize);
@@ -363,7 +342,7 @@ static void AppTaskCreate(void){
   */
 static void PIDCalculator_Task(void* parameter){
 	float kp = 0.5;
-	float ki = 0;
+	float ki = 0.01;
 	float kd = 0;
 	PID* lVelocityPID = PID_Create_Object(kp,ki,kd);
 	PID* rVelocityPID = PID_Create_Object(kp,ki,kd);
@@ -659,6 +638,7 @@ void USART2_IRQHandler(void){
 		}
 	}
 }
+
 //定时器2中断服务函数
 //每毫秒触发一次中断
 void TIM2_IRQHandler(void){
