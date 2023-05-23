@@ -25,17 +25,38 @@ void IIC_Init(){
 }
 
 void IIC_Start(){
+	uint16_t timeout = 65535;
 	I2C_GenerateSTART(I2C1,ENABLE); 
-	while(I2C_CheckEvent(I2C1,I2C_EVENT_MASTER_MODE_SELECT) != SUCCESS);
+	while(I2C_CheckEvent(I2C1,I2C_EVENT_MASTER_MODE_SELECT) != SUCCESS && timeout){
+		timeout--;
+	}
+	if(timeout == 0){
+		I2C_Cmd(I2C1, DISABLE);
+		I2C_Cmd(I2C1, ENABLE);
+	}
 }
 
 void IIC_Send_Address_Write(u8 address){
+	uint16_t timeout = 65535;
 	I2C_Send7bitAddress(I2C1, address, I2C_Direction_Transmitter); 
-	while(I2C_CheckEvent(I2C1,I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) != SUCCESS);
+	while(I2C_CheckEvent(I2C1,I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED) != SUCCESS && timeout){
+		timeout--;
+	}
+	if(timeout == 0){
+		I2C_Cmd(I2C1, DISABLE);
+		I2C_Cmd(I2C1, ENABLE);
+	}
 }
 void IIC_Send_Byte(u8 byte){
-	I2C_SendData(I2C1,byte); 
-	while(I2C_CheckEvent(I2C1,I2C_EVENT_MASTER_BYTE_TRANSMITTING) != SUCCESS);
+	uint16_t timeout = 65535;
+	I2C_SendData(I2C1,byte);
+	while(I2C_CheckEvent(I2C1,I2C_EVENT_MASTER_BYTE_TRANSMITTING) != SUCCESS && timeout){
+		timeout--;
+	}
+	if(timeout == 0){
+		I2C_Cmd(I2C1, DISABLE);
+		I2C_Cmd(I2C1, ENABLE);
+	}
 }
 void IIC_Stop(){
 	I2C_GenerateSTOP(I2C1,ENABLE);

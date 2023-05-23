@@ -138,6 +138,7 @@ u16 rTime = 0;//右轮1脉冲计时
 u16 PWMVal[2] = {0};
 
 u8 carMode = 0;//小车运行模式 0-受Zigbee协调器控制 1-受循迹外设控制
+          
 /*
 *************************************************************************
 *                             函数声明
@@ -198,10 +199,11 @@ static void Setup(void){
 	MTS_Init();
 	LED_Init();	  		//LED初始化
 	USART1_Init(115200);//串口1初始化
+	USART2_Init(115200);
 	Key_Init();
 	TIM2_Int_Init(10-1,7200-1);//定时器时钟72M，分频系数7200，所以72M/7200=10Khz的计数频率，计数10次为1ms
 	vSensors_Init();
-	USART2_Init(115200);
+	
 //	OLED_Init();
 }
 
@@ -238,7 +240,7 @@ static void AppTaskCreate(void){
 										ReplaceVStorageArea,	//队列的存储区域
 										&ReplaceV_Structure	//队列的数据结构
 										);	
-	if(ReplaceVHandle != NULL)/* 创建成功 */
+ 	if(ReplaceVHandle != NULL)/* 创建成功 */
 		printf("ReplaceV队列创建成功!\r\n");
 	else
 		printf("ReplaceV队列创建失败!\r\n");
@@ -367,9 +369,9 @@ static void AppTaskCreate(void){
                                         (StackType_t*   )OLEDShowing_Task_Stack,	//任务堆栈
                                         (StaticTask_t*  )&OLEDShowing_Task_TCB);	//任务控制块   
 	if(OLEDShowing_Task_Handle != NULL)/* 创建成功 */
-		printf("Selfcruising任务创建成功!\r\n");
+		printf("OLEDShowing任务创建成功!\r\n");
 	else
-		printf("Selfcruising任务创建失败!\r\n");
+		printf("OLEDShowing任务创建失败!\r\n");
 
 	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务 
 	vTaskSuspend(Motor_Task_Handle);//挂起电机任务，因为车还没启动
@@ -387,12 +389,12 @@ static void AppTaskCreate(void){
   * @retval    
   */
 static void OLEDShowing_Task(void* parameter){
-	u8 x = 0,y = 0;
-	//初始化u8g2 
-	u8g2_t u8g2;                                                                              // a structure which will contain all the data for one display
+	u8 x = 0,y = 0;                           
+	//初始化u8g2      
+	u8g2_t u8g2;                                                               // a structure which will contain all the data for one display
 	u8g2_Setup_ssd1306_i2c_128x64_noname_f(&u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);// init u8g2 structure
 	u8g2_InitDisplay(&u8g2);                                                                      // send init sequence to the display, display is in sleep mode after this,
-	u8g2_SetPowerSave(&u8g2, 0);                                                                  // wake up display
+	u8g2_SetPowerSave(&u8g2, 0);                                       // wake up display
 	while (1){
 		/* Begin of U8G2*/
 		u8g2_ClearBuffer(&u8g2);
@@ -432,18 +434,19 @@ static void Tracking_Task(void* parameter){
 u8 trackingFlag = 0x11;
 static void Selfcruising_Task(void* parameter){
 	while(1){
+		vTaskDelay(1);
 		if(carMode == 1){
 			if(trackingFlag == 0x11){//0b10001
 				//保持1m/s直行
 				if(lTargetV == 0 && rTargetV == 0){
 					lTargetV = rTargetV = 1;//这里不拉到1，是因为如果拉到1会导致下面的第一个elseif会被高概率执行
 				}
-				else if(lTargetV == 1 && rTargetV == 1){
+				else if(lTargetV >= 1 && rTargetV >= 1){
 					if(lVelocity < rVelocity){
 						rTargetV -= 0.01;
 					}
 					else if(rVelocity < lVelocity){
-						lTargetV -= 0.01;
+						lTargetV -= 0.02;
 					}
 				}
 				else if(lTargetV < 1 || rTargetV < 1 ){
@@ -451,7 +454,7 @@ static void Selfcruising_Task(void* parameter){
 						lTargetV += 0.01;
 					}
 					else if(rVelocity < lVelocity){
-						rTargetV += 0.01;
+						rTargetV += 0.02;
 					}
 				}
 				if(lTargetV > 1){
@@ -463,7 +466,6 @@ static void Selfcruising_Task(void* parameter){
 			}
 			else if(trackingFlag == 0x13 || trackingFlag == 0x03 || trackingFlag == 0x02){//0b10011 0b00011 0b00010
 				//小左转
-				vTaskDelay(10);
 				if(lTargetV > 0){
 					lTargetV -= 0.03;
 					rTargetV -= 0.01;
@@ -471,7 +473,6 @@ static void Selfcruising_Task(void* parameter){
 			}
 			else if(trackingFlag == 0x07 || trackingFlag == 0x06 || trackingFlag == 0x04){//0b00111 0b00110 0b00100
 				//大左转
-				vTaskDelay(10);
 				if(lTargetV > 0){
 					lTargetV -= 0.05;
 					rTargetV -= 0.02;
@@ -493,18 +494,22 @@ static void Selfcruising_Task(void* parameter){
   * @brief 时刻计算需要计算的数据
   */
 static void PIDCalculator_Task(void* parameter){
-	float kp = 0.3141592535;
-	float ki = 0.0000005;
-	float kd = 0.3141592535;
+	float kp = 10;
+	float ki = 0.00005;
+	float kd = 10;
 	PID* lVelocityPID = PID_Create_Object(kp,ki,kd);
-	PID* rVelocityPID = PID_Create_Object(kp,ki,kd);
+	PID* rVelocityPID = PID_Create_Object(kp,ki,kd+5);
+//	while(1){
+//		lReplaceV = lTargetV;
+//		rReplaceV = rTargetV;
+//	}
 	while(1){
 		if(lTargetV >= 0.01 || rTargetV >= 0.01){
-			if(rTargetV != lVelocity){
-				rReplaceV = rVelocity + PID_Classic(rVelocityPID, rTargetV-rVelocity);
+			if(rTargetV != rVelocity){
+				rReplaceV = PID_Classic(rVelocityPID, rTargetV-rVelocity);
 			}
 			if(lTargetV != lVelocity){
-				lReplaceV = lVelocity + PID_Classic(lVelocityPID, lTargetV-lVelocity);
+				lReplaceV = PID_Classic(lVelocityPID, lTargetV-lVelocity);
 			}
 		}
 		else{
@@ -587,18 +592,15 @@ static void lCalcVelocity_Task(void* parameter){
 	u16 lCounter = 0;
 	u16 i;
 	while(1){
-//		vTaskSuspend(Motor_Task_Handle);
-//		vTaskSuspend(PIDCalculator_Task_Handle);
 		xSemaphoreTake(vSensorLCountHandle,portMAX_DELAY);
 		lCounter = uxSemaphoreGetCount(vSensorLCountHandle);
 		for(i = 0; i < lCounter; i++){
 			xSemaphoreTake(vSensorLCountHandle,0);
 		}
 		lCounter++;
-		//计算两个轮子的速度
+		//计算轮子的速度
 		lVelocity = Filter((ONEPULSEDISTANCE * lCounter * 1000) / lTime, lVelocity, filterNum);
 		lTime = 0;
-///		vTaskResume(PIDCalculator_Task_Handle);
 	}
 }
 
@@ -616,7 +618,7 @@ static void rCalcVelocity_Task(void* parameter){
 			xSemaphoreTake(vSensorRCountHandle,0);
 		}
 		rCounter++;
-		//计算两个轮子的速度
+		//计算轮子的速度
 		rVelocity = Filter((ONEPULSEDISTANCE*rCounter * rCounter * 1000) / rTime, rVelocity, filterNum);
 		rTime = 0;
 	}
@@ -658,10 +660,15 @@ static void ListeningSensors_Task(void* parameter){
   */
 
 static void Motor_Task(void* parameter){
-	float ignoreErr = 0.1;//忽视速度上的误差值，硬件问题没办法
+	float ignoreErr = 0;//忽视速度上的误差值，硬件问题没办法
+//	while(1){
+//		MTLEN(TIM3,30);
+//		MTREN(TIM3,30);
+//		printf("左轮速度为:%.2fm/s  右轮速度为:%.2fm/s  PWM占空比为：%d\r\n",lVelocity,rVelocity,30);
+//	}
 	while(1){
-		vTaskDelay(10);
-		if(lReplaceV < lVelocity-ignoreErr && PWMVal[0] > 0){
+		vTaskDelay(1);
+		if(lReplaceV < lVelocity-ignoreErr && PWMVal[0] > 20){
 			PWMVal[0]--;
 			MTLEN(TIM3,PWMVal[0]);
 		}
@@ -670,7 +677,7 @@ static void Motor_Task(void* parameter){
 			MTLEN(TIM3,PWMVal[0]);
 		}
 
-		if(rReplaceV < rVelocity-ignoreErr && PWMVal[1] > 0){
+		if(rReplaceV < rVelocity-ignoreErr && PWMVal[1] > 20){
 			PWMVal[1]--;
 			MTREN(TIM3,PWMVal[1]);
 		}
@@ -819,11 +826,11 @@ void TIM2_IRQHandler(void){
 			rVelocity = 0;
 		if(usart1RXTime == 10){
 			//测试，会将串口收到的所有内容返回
-			printf("Usart1 Recive over~\r\n");
-			for(u8 i = 0; i < USART1_RX_STA; i++){
-				printf("%lX ", USART1_RX_BUF[i]);
-			}
-			printf("\r\n");
+//			printf("Usart1 Recive over~\r\n");
+//			for(u8 i = 0; i < USART1_RX_STA; i++){
+//				printf("%lX ", USART1_RX_BUF[i]);
+//			}
+//			printf("\r\n");
 			/*这下面写串口消息接收完的逻辑判断*/
 //			if(USART1_RX_BUF[0] == 0x55)
 //				Zigbee_Analyse_Command_Data();
@@ -840,11 +847,11 @@ void TIM2_IRQHandler(void){
 		
 		if(usart2RXTime == 10){
 			//测试，会将串口收到的所有内容返回
-			printf("Usart2 Recive over~\r\n");
-			for(u8 i = 0; i < USART2_RX_STA; i++){
-				printf("%lX ", USART2_RX_BUF[i]);
-			}
-			printf("\r\n");
+//			printf("Usart2 Recive over~\r\n");
+//			for(u8 i = 0; i < USART2_RX_STA; i++){
+//				printf("%lX ", USART2_RX_BUF[i]);
+//			}
+//			printf("\r\n");
 			/*这下面写串口消息接收完的逻辑判断*/
 //			if(USART1_RX_BUF[0] == 0x55)
 //				Zigbee_Analyse_Command_Data();

@@ -152,9 +152,41 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>693</LineNumber>
+          <LineNumber>509</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134223278</Address>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>.\main.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>60</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134223952</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\HARDWARE\IIC_Hard\IIC_Hard.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\LED\../HARDWARE/IIC_Hard/IIC_Hard.c\60</Expression>
+        </Bp>
+        <Bp>
+          <Number>2</Number>
+          <Type>0</Type>
+          <LineNumber>791</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134227748</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -163,12 +195,44 @@
           <BreakIfRCount>1</BreakIfRCount>
           <Filename>.\main.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\LED\main.c\693</Expression>
+          <Expression>\\LED\main.c\791</Expression>
         </Bp>
         <Bp>
-          <Number>1</Number>
+          <Number>3</Number>
           <Type>0</Type>
-          <LineNumber>205</LineNumber>
+          <LineNumber>788</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134227722</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>.\main.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\LED\main.c\788</Expression>
+        </Bp>
+        <Bp>
+          <Number>4</Number>
+          <Type>0</Type>
+          <LineNumber>508</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134224830</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>.\main.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\LED\main.c\508</Expression>
+        </Bp>
+        <Bp>
+          <Number>5</Number>
+          <Type>0</Type>
+          <LineNumber>785</LineNumber>
           <EnabledFlag>1</EnabledFlag>
           <Address>0</Address>
           <ByteObject>0</ByteObject>
@@ -187,6 +251,11 @@
           <count>0</count>
           <WinNumber>1</WinNumber>
           <ItemText>lVelocityPID</ItemText>
+        </Ww>
+        <Ww>
+          <count>1</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>pid</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>
@@ -255,7 +324,7 @@
 
   <Group>
     <GroupName>USER</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -471,7 +540,7 @@
 
   <Group>
     <GroupName>CORE</GroupName>
-    <tvExp>0</tvExp>
+    <tvExp>1</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
