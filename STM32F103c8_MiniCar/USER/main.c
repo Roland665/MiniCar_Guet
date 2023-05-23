@@ -10,6 +10,7 @@
 #include "motor.h"
 #include "vSensor.h"
 #include "PID.h"
+#include "OLED.h"
 
 /******************************* 宏定义 ************************************/
 /*最多可以存储 2 个 u8类型变量的队列 */
@@ -24,8 +25,6 @@
 static TaskHandle_t AppTaskCreate_Handle = NULL;
 /* LED 任务句柄 */
 static TaskHandle_t LED_Task_Handle = NULL;
-/* KeyScan 任务句柄*/
-//static TaskHandle_t KeyScan_Task_Handle = NULL;
 /* Motor 任务句柄*/
 static TaskHandle_t Motor_Task_Handle = NULL;
 /* ListeningSensors 任务句柄*/
@@ -42,6 +41,8 @@ static TaskHandle_t PIDCalculator_Task_Handle = NULL;
 static TaskHandle_t Tracking_Task_Handle = NULL;
 /* Selfcruising 任务句柄*/
 static TaskHandle_t Selfcruising_Task_Handle = NULL;
+/* OLEDShowing 任务句柄*/
+static TaskHandle_t OLEDShowing_Task_Handle = NULL;
 /********************************** 内核对象句柄 *********************************/
 static SemaphoreHandle_t printfSemphr_Handle = NULL;/* 串口打印互斥信号量句柄*/
 
@@ -81,6 +82,8 @@ static StackType_t PIDCalculator_Task_Stack[128];
 static StackType_t Selfcruising_Task_Stack[128];
 /* Tracking 任务堆栈 */
 static StackType_t Tracking_Task_Stack[128];
+/* OLEDShowing 任务堆栈 */
+static StackType_t OLEDShowing_Task_Stack[128];
 
 /* AppTaskCreate 任务控制块 */
 static StaticTask_t AppTaskCreate_TCB;
@@ -102,6 +105,8 @@ static StaticTask_t PIDCalculator_Task_TCB;
 static StaticTask_t Selfcruising_Task_TCB;
 /* Tracking 任务控制块 */
 static StaticTask_t Tracking_Task_TCB;
+/* OLEDShowing 任务控制块 */
+static StaticTask_t OLEDShowing_Task_TCB;
 
 
 /* 信号量数据结构指针 */
@@ -157,7 +162,8 @@ static void rCalcVelocity_Task(void* parameter);//计算右轮速度任务
 static void AnalyseCommand_Task(void* parameter);//分析命令任务
 static void PIDCalculator_Task(void* parameter);//PID计算任务
 static void Selfcruising_Task(void* parameter);//自巡航任务
-static void Tracking_Task(void* parameter);//自巡航任务
+static void Tracking_Task(void* parameter);//循迹任务
+static void OLEDShowing_Task(void* parameter);//OLED显示任务
 static void Setup(void);/* 用于初始化板载相关资源 */
 
 
@@ -188,7 +194,7 @@ int main(void){
   */
 static void Setup(void){
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);	//4bit都用于设置抢占优先级
-	delay_init();
+//	delay_init();
 	MTS_Init();
 	LED_Init();	  		//LED初始化
 	USART1_Init(115200);//串口1初始化
@@ -196,7 +202,7 @@ static void Setup(void){
 	TIM2_Int_Init(10-1,7200-1);//定时器时钟72M，分频系数7200，所以72M/7200=10Khz的计数频率，计数10次为1ms
 	vSensors_Init();
 	USART2_Init(115200);
-//	Zigbee_Change_Mode(1);
+//	OLED_Init();
 }
 
 static void AppTaskCreate(void){
@@ -351,6 +357,19 @@ static void AppTaskCreate(void){
 		printf("Selfcruising任务创建成功!\r\n");
 	else
 		printf("Selfcruising任务创建失败!\r\n");
+	
+	/* 创建 OLEDShowing_Task 任务 */
+	OLEDShowing_Task_Handle = xTaskCreateStatic((TaskFunction_t	)OLEDShowing_Task,			//任务函数
+                                        (const char* 	)"OLEDShowing_Task",		//任务名称
+                                        (uint32_t 		)128,				//任务栈深
+                                        (void* 		  	)NULL,				//传递给任务函数的参数
+                                        (UBaseType_t 	)5, 				//任务优先级
+                                        (StackType_t*   )OLEDShowing_Task_Stack,	//任务堆栈
+                                        (StaticTask_t*  )&OLEDShowing_Task_TCB);	//任务控制块   
+	if(OLEDShowing_Task_Handle != NULL)/* 创建成功 */
+		printf("Selfcruising任务创建成功!\r\n");
+	else
+		printf("Selfcruising任务创建失败!\r\n");
 
 	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务 
 	vTaskSuspend(Motor_Task_Handle);//挂起电机任务，因为车还没启动
@@ -362,12 +381,48 @@ static void AppTaskCreate(void){
 
 /**
 
+  * @brief OLED显示任务主体
+  * @brief  
+  * @param    
+  * @retval    
+  */
+static void OLEDShowing_Task(void* parameter){
+	u8 x = 0,y = 0;
+	//初始化u8g2 
+	u8g2_t u8g2;                                                                              // a structure which will contain all the data for one display
+	u8g2_Setup_ssd1306_i2c_128x64_noname_f(&u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);// init u8g2 structure
+	u8g2_InitDisplay(&u8g2);                                                                      // send init sequence to the display, display is in sleep mode after this,
+	u8g2_SetPowerSave(&u8g2, 0);                                                                  // wake up display
+	while (1){
+		/* Begin of U8G2*/
+		u8g2_ClearBuffer(&u8g2);
+		u8g2_SetFont(&u8g2, u8g2_font_10x20_mf);
+		u8g2_DrawStr(&u8g2, x,y,"Dataxxx");
+		if(x >= 70)
+		{
+			x = y = 0;
+		}
+		else
+		{
+			x++;
+			y++;
+		}
+
+		u8g2_SendBuffer(&u8g2);
+		/* End of U8G2 */
+	}
+}
+/**
+
   * @brief 循迹 任务主体
   * @brief  
   * @param    
   * @retval    
   */
-static void Tracking_Task(void* parameter);//自巡航任务
+static void Tracking_Task(void* parameter){
+	while(1);
+
+}//自巡航任务
 
 
 /**
