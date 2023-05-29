@@ -1,8 +1,6 @@
 #include "led.h"   
 
 
-u8 LED1FlashTime = 0;//LED1闪烁剩余时长,归0时停止闪烁
-
 //所有独立IO口控制的LED总的初始函数
 void LED_Init(void){
 	LED1_Init();
