@@ -31,7 +31,7 @@ float PID_Classic(PID* pid, float err_new){
     float result;
     pid->err_new = err_new;
     pid->intergral += pid->err_new;
-    result = pid->kp*pid->err_new + pid->ki*pid->intergral + pid->kd*(pid->err_new - pid->err_old);
+    result = pid->kp*pid->err_new + pid->ki*pid->intergral + pid->kd*(pid->err_old - pid->err_new);
     pid->err_old = pid->err_new;
     return result;
 }

@@ -157,7 +157,8 @@ u8 metalDiscoveryFlag = 0;//set 1 means this car found metal
 
 u8 coinCounter;//coin number counter
 
-u8 trackingFlag = 0x11;//Six bit of one byte was used to means the state of car in road. The reflector is 1, the other is 0
+u8 carState = 0;//means the car`s move state, 0 is along the line, 1 is turn left slowly, 2 is turn left quickly, 3 is turn right slowly, 4 is turn right quickly
+u8 trackingFlag = 0;//Six bit of one byte was used to means the state of car in road. The reflector is 1, the other is 0
 
 /*
 *************************************************************************
@@ -487,6 +488,7 @@ static void OLEDShowing_Task(void* parameter){
 	u8g2_InitDisplay(&u8g2);        // send init sequence to the display, display is in sleep mode after this
 	u8g2_SetPowerSave(&u8g2, 0);    //place 1 means open power-saveing, you`ll see nothing in the screem 
 	float v = 0;
+	while(1);
 	while (1){
 		u8g2_ClearBuffer(&u8g2);           //clear the u8g2 buffer
 		if(metalDiscoveryFlag == 0){
@@ -530,13 +532,18 @@ static void Tracking_Task(void* parameter){
 	u16 GPIO_Pins[6] = {GPIO_Pin_10, GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_13, GPIO_Pin_14, GPIO_Pin_15};//红外模块引脚
 	u8 i;
 	while(1){
-//		printf("%d",trackingFlag);
-//		trackingFlag = 0;
-//		for(i = 0 ;i < 6; i++){
-//			trackingFlag |= GPIO_ReadInputDataBit(GPIOB, GPIO_Pins[i]);
-//			trac
-//		}
-		vTaskDelay(1000);
+		trackingFlag = 0;
+		for(i = 0 ;i < 6; i++){
+			trackingFlag |= GPIO_ReadInputDataBit(GPIOB, GPIO_Pins[i]);
+			trackingFlag <<= 1;
+		}
+		trackingFlag >>= 1;
+		vTaskDelay(2);
+		// for(i = 0 ;i < 6; i++){
+		// 	printf("%d",1&trackingFlag >> (5-i));
+		// }
+		// printf("\r\n");
+		// vTaskDelay(1000);
 	}
 }//自巡航任务
 
@@ -546,58 +553,100 @@ static void Tracking_Task(void* parameter){
   * @brief 自巡航 任务主体
   */
 static void Selfcruising_Task(void* parameter){
+	portFLOAT lV = 0.45;//沿线行驶时左轮推荐速度
+	portFLOAT rV = 0.6;//沿线行驶时右轮推荐速度
+	portFLOAT deltaV = rV - lV;
 	while(1){
-		vTaskDelay(1);
+		vTaskDelay(2);
 		if(carMode == 1){
-			if(trackingFlag == 0x11){//0b10001
-				//保持1m/s直行
+			if(carState == 0){//along the line
+				if(trackingFlag == 0x0C || trackingFlag == 0x00){//0b001100 0b000000
+					//保持1m/s直行
+					if(lTargetV >= lV && rTargetV >= rV){
+						if(lVelocity < rVelocity){
+							rTargetV -= 0.01;
+						}
+						else if(rVelocity < lVelocity+deltaV){
+							lTargetV -= 0.01;
+						}
+					}
+					else if(lTargetV < lV || rTargetV < rV){
+						if(lVelocity < rVelocity){
+							lTargetV += 0.01;
+						}
+						if(rVelocity < lVelocity){
+							rTargetV += 0.01;
+						}
+					}
+				}
+				else if(trackingFlag == 0x08){//0b001000
+					//the car shifted a little bit to the left
+					lTargetV -= 1;
+					rTargetV += 1;
+				}
+				else if(trackingFlag == 0x18){//0x011000
+					//the car shifted a bit to the left
+					lTargetV -= 1.2;
+					rTargetV += 1.2;
+				}
+				else if(trackingFlag == 0x10){//0x010000
+					//the car shifted to the left
+					lTargetV -= 1.4;
+					rTargetV += 1.4;
+				}
+				else if(trackingFlag == 0x30){//0x110000
+					//the car shifted much to the left
+					lTargetV -= 1.6;
+					rTargetV += 1.6;
+				}
+				else if(trackingFlag == 0x20){//0x100000
+					//the car shifted too much to the left
+					lTargetV = 0;
+					rTargetV += 0.1;
+				}
+				else if(trackingFlag == 0x04){//0b000100 
+					//the car shifted a little bit to the right
+					rTargetV -= 0.8;
+					lTargetV += 1;
+				}
+				else if(trackingFlag == 0x06){//0b000110
+					//the car shifted a bit to the right
+					rTargetV -= 1;
+					lTargetV += 1.2;
+				}
+				else if(trackingFlag == 0x02){//0b000010
+					//the car shifted a bit to the right
+					rTargetV -= 1.2;
+					lTargetV += 1.4;
+				}
+				else if(trackingFlag == 0x03){//0b000011 
+					//the car shifted much to the right
+					rTargetV -= 1.4;
+					lTargetV += 1.6;
+				}
+				else if(trackingFlag == 0x01){//0b000001
+					//the car shifted too much to the right
+					rTargetV = 0;
+					lTargetV += 0.1;
+				}
+				else{
+					//处于不正常状态，停车
+					lTargetV = 0;
+					rTargetV = 0;
+				}				
 				if(lTargetV == 0 && rTargetV == 0){
-					lTargetV = rTargetV = 1;//这里不拉到1，是因为如果拉到1会导致下面的第一个elseif会被高概率执行
+					lTargetV = lV;
+					rTargetV = rV;
 				}
-				else if(lTargetV >= 1 && rTargetV >= 1){
-					if(lVelocity < rVelocity){
-						rTargetV -= 0.01;
-					}
-					else if(rVelocity < lVelocity){
-						lTargetV -= 0.02;
-					}
+				if(lTargetV > lV || lTargetV < 0){
+					lTargetV = lV;
 				}
-				else if(lTargetV < 1 || rTargetV < 1 ){
-					if(lVelocity < rVelocity){
-						lTargetV += 0.01;
-					}
-					else if(rVelocity < lVelocity){
-						rTargetV += 0.02;
-					}
-				}
-				if(lTargetV > 1){
-					lTargetV = 1;
-				}
-				if(rTargetV > 1){
-					rTargetV = 1;
-				}
-			}
-			else if(trackingFlag == 0x13 || trackingFlag == 0x03 || trackingFlag == 0x02){//0b10011 0b00011 0b00010
-				//小左转
-				if(lTargetV > 0){
-					lTargetV -= 0.03;
-					rTargetV -= 0.01;
-				}
-			}
-			else if(trackingFlag == 0x07 || trackingFlag == 0x06 || trackingFlag == 0x04){//0b00111 0b00110 0b00100
-				//大左转
-				if(lTargetV > 0){
-					lTargetV -= 0.05;
-					rTargetV -= 0.02;
-				}
-			}
-			else if(trackingFlag == 0x15 || trackingFlag == 0x18 || trackingFlag == 0x08){//0b11001 0b11000 0b01000
-				//小右转
-			}
-			else if(trackingFlag == 0x1C || trackingFlag == 0x0C){//0b11100 0b01100
-				//大右转
+				if(rTargetV > rV || rTargetV < 0){
+					rTargetV = rV;
+				}				
 			}
 		}
+//		vTaskDelay(1);
 	}
 }
 
@@ -607,16 +656,18 @@ static void Selfcruising_Task(void* parameter){
   * @brief 时刻计算需要计算的数据
   */
 static void PIDCalculator_Task(void* parameter){
-	float kp = 10;
-	float ki = 0.00005;
-	float kd = 10;
+	float kp = 2;
+	float ki = 0.00006;
+	float kd = 1000;
 	PID* lVelocityPID = PID_Create_Object(kp,ki,kd);
-	PID* rVelocityPID = PID_Create_Object(kp,ki,kd+5);
+	PID* rVelocityPID = PID_Create_Object(kp,ki,kd);
 //	while(1){
 //		lReplaceV = lTargetV;
 //		rReplaceV = rTargetV;
 //	}
+	
 	while(1){
+		vTaskDelay(1);
 		if(lTargetV >= 0.01 || rTargetV >= 0.01){
 			if(rTargetV != rVelocity){
 				rReplaceV = PID_Classic(rVelocityPID, rTargetV-rVelocity);
@@ -650,41 +701,45 @@ static void AnalyseCommand_Task(void* parameter){
 		if(xReturn != pdPASS)
 			printf("命令消息接收失败\r\n");
 		printf("成功接收控制命令：%d\r\n",commands[1]);
-		
+
 		if(commands[0] == 0x00){
 			carMode = 0;
 			lTargetV = 0;
 			rTargetV = 0;
+			lReplaceV = 0;
+			rReplaceV = 0;
 			printf("停车~\r\n");
 			vTaskSuspend(lCalcVelocity_Task_Handle);//挂起测速任务，因为车还没启动
 			vTaskSuspend(rCalcVelocity_Task_Handle);//挂起测速任务，因为车还没启动
-			PWMVal[0] = 0;
-			PWMVal[1] = 0;
 			MTLEN(TIM3,0);
 			MTREN(TIM3,0);
 			lVelocity = 0;
 			rVelocity = 0;
 			vTaskSuspend(Motor_Task_Handle);//挂起电机任务，因为车还没启动
 		}
-		else if(commands[0] == 0x01){		
+		else if(commands[0] == 0x01){	
+			carMode = 0;	
 			if(commands[1] == 0){
 				printf("切换失败，速度需大于0~\r\n");
 			}
 			else{
 				lTargetV = commands[1]/100 + (commands[1]%100)*0.01;
-				rTargetV = commands[2]/100 + (commands[2]%100)*0.01;
+				rTargetV = lTargetV;
 				printf("开车！目标车速：%.2lfm/s\r\n",lTargetV);
+				vTaskResume(lCalcVelocity_Task_Handle);//解挂测速任务，车已启动
+				vTaskResume(rCalcVelocity_Task_Handle);//解挂测速任务，车已启动
+				vTaskResume(Motor_Task_Handle);//解挂电机任务
 			}
 		}
 		else if(commands[0] == 0x02){
-			if(carMode == 0){	
+			carMode = 0;
 				lTargetV = commands[1]/100 + (commands[1]%100)*0.01;
 				rTargetV = commands[2]/100 + (commands[2]%100)*0.01;
 				printf("调速成功~左右车轮目标车速为：%.2lfm/s  %.2lfm/s\r\n",lTargetV,rTargetV);
 				vTaskResume(lCalcVelocity_Task_Handle);//解挂测速任务，车已启动
 				vTaskResume(rCalcVelocity_Task_Handle);//解挂测速任务，车已启动
 				vTaskResume(Motor_Task_Handle);//解挂电机任务
-			}
+			
 		}
 		else if(commands[0] == 0x03){
 			carMode = 1;
@@ -696,7 +751,7 @@ static void AnalyseCommand_Task(void* parameter){
 	}
 }
 
-float filterNum = 0.05f;
+float filterNum = 0.5f;
 /**
   * @brief    计算速度任务主体
   * @brief    计算每秒测速传感器
@@ -775,30 +830,57 @@ static void ListeningSensors_Task(void* parameter){
 static void Motor_Task(void* parameter){
 	float ignoreErr = 0;//忽视速度上的误差值，硬件问题没办法
 //	while(1){
-//		MTLEN(TIM3,30);
-//		MTREN(TIM3,30);
+//		MTLEN(TIM3,100);
+//		MTREN(TIM3,100);
 //		printf("左轮速度为:%.2fm/s  右轮速度为:%.2fm/s  PWM占空比为：%d\r\n",lVelocity,rVelocity,30);
 //	}
 	while(1){
 		vTaskDelay(1);
-		if(lReplaceV < lVelocity-ignoreErr && PWMVal[0] > 20){
-			PWMVal[0]--;
+		if(lTargetV != 0){
+			if(lReplaceV < lVelocity-ignoreErr && PWMVal[0] >= 20){
+				PWMVal[0]-=2;
+				MTLEN(TIM3,PWMVal[0]);
+			}
+			else if(lReplaceV > lVelocity+ignoreErr && PWMVal[0] <= 100){
+				PWMVal[0]+=4;
+				MTLEN(TIM3,PWMVal[0]);
+			}
+//			else if(PWMVal[0] < 20){
+//				PWMVal[0] = 20;
+//				MTLEN(TIM3,PWMVal[0]);
+//			}
+		}
+		else{			
+			PWMVal[0] = 0;
 			MTLEN(TIM3,PWMVal[0]);
 		}
-		else if(lReplaceV > lVelocity+ignoreErr && PWMVal[0] < 100){
-			PWMVal[0]++;
-			MTLEN(TIM3,PWMVal[0]);
+		
+		if(rTargetV != 0){
+			if(rReplaceV < rVelocity-ignoreErr && PWMVal[1] >= 20){
+				PWMVal[1]-=2;
+				MTREN(TIM3,PWMVal[1]);
+			}
+			else if(rReplaceV > rVelocity+ignoreErr && PWMVal[1] <= 100){
+				PWMVal[1]+=4;
+				MTREN(TIM3,PWMVal[1]);
+			}
+//			else if(PWMVal[1] < 20){
+//				PWMVal[1] = 20;
+//				MTREN(TIM3,PWMVal[1]);
+//			}
+			printf("左轮速度为:%.2fm/s  右轮速度为:%.2fm/s  左轮待替换速度为:%.2fm/s  右轮待替换速度为:%.2fm/s\r\n",lVelocity,rVelocity,lReplaceV,rReplaceV);
 		}
-
-		if(rReplaceV < rVelocity-ignoreErr && PWMVal[1] > 20){
-			PWMVal[1]--;
+		else{
+			PWMVal[1] = 0;
 			MTREN(TIM3,PWMVal[1]);
 		}
-		else if(rReplaceV > rVelocity+ignoreErr && PWMVal[1] < 100){
-			PWMVal[1]++;
-			MTREN(TIM3,PWMVal[1]);
+		
+		if(PWMVal[0] > 100){
+			PWMVal[0] = 100;
 		}
-		printf("左轮速度为:%.2fm/s  右轮速度为:%.2fm/s  左轮待替换速度为:%.2fm/s  右轮待替换速度为:%.2fm/s\r\n",lVelocity,rVelocity,lReplaceV,rReplaceV);
+		if(PWMVal[1] > 100){
+			PWMVal[1] = 100;
+		}
 	}
 }
 
