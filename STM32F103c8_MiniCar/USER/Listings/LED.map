@@ -64,6 +64,11 @@ Section Cross References
     main.o(i.OLEDShowing_Task) refers to u8x8_display.o(i.u8x8_InitDisplay) for u8x8_InitDisplay
     main.o(i.OLEDShowing_Task) refers to u8x8_display.o(i.u8x8_SetPowerSave) for u8x8_SetPowerSave
     main.o(i.OLEDShowing_Task) refers to u8g2_buffer.o(i.u8g2_ClearBuffer) for u8g2_ClearBuffer
+    main.o(i.OLEDShowing_Task) refers to tasks.o(i.vTaskDelay) for vTaskDelay
+    main.o(i.OLEDShowing_Task) refers to fadd.o(.text) for __aeabi_fadd
+    main.o(i.OLEDShowing_Task) refers to f2d.o(.text) for __aeabi_f2d
+    main.o(i.OLEDShowing_Task) refers to dmul.o(.text) for __aeabi_dmul
+    main.o(i.OLEDShowing_Task) refers to d2f.o(.text) for __aeabi_d2f
     main.o(i.OLEDShowing_Task) refers to u8g2_font.o(i.u8g2_SetFont) for u8g2_SetFont
     main.o(i.OLEDShowing_Task) refers to u8g2_font.o(i.u8g2_DrawGlyph) for u8g2_DrawGlyph
     main.o(i.OLEDShowing_Task) refers to u8g2_font.o(i.u8g2_DrawStr) for u8g2_DrawStr
@@ -326,6 +331,7 @@ Section Cross References
     startup_stm32f10x_md.o(RESET) refers to port.o(.emb_text) for SVC_Handler
     startup_stm32f10x_md.o(RESET) refers to stm32f10x_it.o(i.DebugMon_Handler) for DebugMon_Handler
     startup_stm32f10x_md.o(RESET) refers to stm32f10x_it.o(i.SysTick_Handler) for SysTick_Handler
+    startup_stm32f10x_md.o(RESET) refers to main.o(i.EXTI1_IRQHandler) for EXTI1_IRQHandler
     startup_stm32f10x_md.o(RESET) refers to main.o(i.TIM2_IRQHandler) for TIM2_IRQHandler
     startup_stm32f10x_md.o(RESET) refers to main.o(i.USART1_IRQHandler) for USART1_IRQHandler
     startup_stm32f10x_md.o(RESET) refers to main.o(i.USART2_IRQHandler) for USART2_IRQHandler
@@ -2415,9 +2421,9 @@ Image Symbol Table
     ../clib/microlib/longlong.c              0x00000000   Number         0  llshl.o ABSOLUTE
     ../clib/microlib/longlong.c              0x00000000   Number         0  llsshr.o ABSOLUTE
     ../clib/microlib/malloc/malloc.c         0x00000000   Number         0  mallocra.o ABSOLUTE
+    ../clib/microlib/malloc/malloc.c         0x00000000   Number         0  malloca.o ABSOLUTE
     ../clib/microlib/malloc/malloc.c         0x00000000   Number         0  mallocr.o ABSOLUTE
     ../clib/microlib/malloc/malloc.c         0x00000000   Number         0  malloc.o ABSOLUTE
-    ../clib/microlib/malloc/malloc.c         0x00000000   Number         0  malloca.o ABSOLUTE
     ../clib/microlib/malloc/mvars.c          0x00000000   Number         0  mvars.o ABSOLUTE
     ../clib/microlib/printf/printf.c         0x00000000   Number         0  printfb.o ABSOLUTE
     ../clib/microlib/printf/printf.c         0x00000000   Number         0  printf4.o ABSOLUTE
@@ -2431,8 +2437,8 @@ Image Symbol Table
     ../clib/microlib/printf/printf.c         0x00000000   Number         0  printf0.o ABSOLUTE
     ../clib/microlib/printf/printf.c         0x00000000   Number         0  printf1.o ABSOLUTE
     ../clib/microlib/printf/stubs.s          0x00000000   Number         0  stubs.o ABSOLUTE
-    ../clib/microlib/string/memcpy.c         0x00000000   Number         0  memcpyb.o ABSOLUTE
     ../clib/microlib/string/memcpy.c         0x00000000   Number         0  memcpya.o ABSOLUTE
+    ../clib/microlib/string/memcpy.c         0x00000000   Number         0  memcpyb.o ABSOLUTE
     ../clib/microlib/string/memset.c         0x00000000   Number         0  memseta.o ABSOLUTE
     ../clib/microlib/stubs.s                 0x00000000   Number         0  iusefp.o ABSOLUTE
     ../clib/microlib/stubs.s                 0x00000000   Number         0  useno.o ABSOLUTE
@@ -2452,6 +2458,7 @@ Image Symbol Table
     ..\CORE\startup_stm32f10x_md.s           0x00000000   Number         0  startup_stm32f10x_md.o ABSOLUTE
     ..\HARDWARE\BEEP\beep.c                  0x00000000   Number         0  beep.o ABSOLUTE
     ..\HARDWARE\DCMOTOR\motor.c              0x00000000   Number         0  motor.o ABSOLUTE
+    ..\HARDWARE\EXTI\exti.c                  0x00000000   Number         0  exti.o ABSOLUTE
     ..\HARDWARE\IIC_Hard\IIC_Hard.c          0x00000000   Number         0  iic_hard.o ABSOLUTE
     ..\HARDWARE\IWDG\iwdg.c                  0x00000000   Number         0  iwdg.o ABSOLUTE
     ..\HARDWARE\KEY\key.c                    0x00000000   Number         0  key.o ABSOLUTE
@@ -3048,7 +3055,6 @@ Image Symbol Table
     DMA1_Channel7_IRQHandler                 0x080001b7   Thumb Code     0  startup_stm32f10x_md.o(.text)
     EXTI0_IRQHandler                         0x080001b7   Thumb Code     0  startup_stm32f10x_md.o(.text)
     EXTI15_10_IRQHandler                     0x080001b7   Thumb Code     0  startup_stm32f10x_md.o(.text)
-    EXTI1_IRQHandler                         0x080001b7   Thumb Code     0  startup_stm32f10x_md.o(.text)
     EXTI2_IRQHandler                         0x080001b7   Thumb Code     0  startup_stm32f10x_md.o(.text)
     EXTI3_IRQHandler                         0x080001b7   Thumb Code     0  startup_stm32f10x_md.o(.text)
     EXTI4_IRQHandler                         0x080001b7   Thumb Code     0  startup_stm32f10x_md.o(.text)

@@ -48,6 +48,8 @@ static TaskHandle_t Selfcruising_Task_Handle = NULL;
 static TaskHandle_t OLEDShowing_Task_Handle = NULL;
 /* MetalDetection 任务句柄*/
 static TaskHandle_t MetalDetection_Task_Handle = NULL;
+/* MetalDetection 任务句柄*/
+static TaskHandle_t MetalDetection_Task_Handle = NULL;
 /********************************** 内核对象句柄 *********************************/
 /* 金属探测器二值信号量句柄*/
 //static SemaphoreHandle_t MetalSemphr_Handle = NULL;
@@ -119,6 +121,8 @@ static StaticTask_t Tracking_Task_TCB;
 static StaticTask_t OLEDShowing_Task_TCB;
 /* MetalDetection 任务控制块 */
 static StaticTask_t MetalDetection_Task_TCB;
+/* MetalDetection 任务控制块 */
+static StaticTask_t MetalDetection_Task_TCB;
 
 
 /* 信号量数据结构指针 */
@@ -185,7 +189,9 @@ static void AnalyseCommand_Task(void* parameter);//分析命令任务
 static void PIDCalculator_Task(void* parameter);//PID计算任务
 static void Selfcruising_Task(void* parameter);//自巡航任务
 static void Tracking_Task(void* parameter);//循迹任务 
+static void Tracking_Task(void* parameter);//循迹任务 
 static void OLEDShowing_Task(void* parameter);//OLED显示任务
+static void MetalDetection_Task(void* parameter);//task of detecting the metal
 static void MetalDetection_Task(void* parameter);//task of detecting the metal
 static void Setup(void);/* 用于初始化板载相关资源 */
 
@@ -218,6 +224,9 @@ int main(void){
 static void Setup(void){
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);	//4bit都用于设置抢占优先级
 	MTS_Init();
+	LED_Init();	  		
+	BEEP_Init();
+	USART1_Init(115200);
 	LED_Init();	  		
 	BEEP_Init();
 	USART1_Init(115200);
@@ -400,12 +409,27 @@ static void AppTaskCreate(void){
                                         (uint32_t 		)OLEDShowingStackDeep,				//任务栈深
                                         (void* 		  	)NULL,				//传递给任务函数的参数
                                         (UBaseType_t 	)4, 				//任务优先级
+                                        (UBaseType_t 	)4, 				//任务优先级
                                         (StackType_t*   )OLEDShowing_Task_Stack,	//任务堆栈
                                         (StaticTask_t*  )&OLEDShowing_Task_TCB);	//任务控制块   
 	if(OLEDShowing_Task_Handle != NULL)/* 创建成功 */
 		printf("OLEDShowing任务创建成功!\r\n");
 	else
 		printf("OLEDShowing任务创建失败!\r\n");
+	
+	/* 创建 MetalDetection_Task 任务 */
+	MetalDetection_Task_Handle = xTaskCreateStatic((TaskFunction_t	)MetalDetection_Task,			//任务函数
+                                        (const char* 	)"MetalDetection_Task",		//任务名称
+                                        (uint32_t 		)128,				//任务栈深
+                                        (void* 		  	)NULL,				//传递给任务函数的参数
+                                        (UBaseType_t 	)4, 				//任务优先级
+                                        (StackType_t*   )MetalDetection_Task_Stack,	//任务堆栈
+                                        (StaticTask_t*  )&MetalDetection_Task_TCB);	//任务控制块   
+	if(MetalDetection_Task_Handle != NULL)/* 创建成功 */
+		printf("MetalDetection任务创建成功!\r\n");
+	else
+		printf("MetalDetection任务创建失败!\r\n");
+
 	
 	/* 创建 MetalDetection_Task 任务 */
 	MetalDetection_Task_Handle = xTaskCreateStatic((TaskFunction_t	)MetalDetection_Task,			//任务函数
@@ -480,7 +504,14 @@ static void MetalDetection_Task(void* parameter){
   */
 static void OLEDShowing_Task(void* parameter){      
 	char str[128] = {0};//需要显示的字符串临时存放处
+static void OLEDShowing_Task(void* parameter){      
+	char str[128] = {0};//需要显示的字符串临时存放处
 	//初始化u8g2      
+	u8g2_t u8g2;               		// a structure which will contain all the data for one display
+	u8g2_Setup_ssd1306_i2c_128x64_noname_f(&u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);
+	u8g2_InitDisplay(&u8g2);        // send init sequence to the display, display is in sleep mode after this
+	u8g2_SetPowerSave(&u8g2, 0);    //place 1 means open power-saveing, you`ll see nothing in the screem 
+	float v = 0;
 	u8g2_t u8g2;               		// a structure which will contain all the data for one display
 	u8g2_Setup_ssd1306_i2c_128x64_noname_f(&u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);
 	u8g2_InitDisplay(&u8g2);        // send init sequence to the display, display is in sleep mode after this
@@ -503,7 +534,26 @@ static void OLEDShowing_Task(void* parameter){
 			u8g2_DrawStr(&u8g2, 32, 59, str);//小车实际速度
 			sprintf(str,"%d",coinCounter);
 			u8g2_DrawStr(&u8g2, 114, 15, str);//硬币实际数量
+		u8g2_ClearBuffer(&u8g2);           //clear the u8g2 buffer
+		if(metalDiscoveryFlag == 0){
+			vTaskDelay(10);
+			v = (lVelocity + rVelocity) * 0.5;
+			u8g2_ClearBuffer(&u8g2);           // wake up display
+			u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t);//图标大全
+			u8g2_DrawGlyph(&u8g2,82,20,0x0047);//硬币数量显示图标
+			u8g2_DrawGlyph(&u8g2,0,63,0x029E);//小电驴图标
+
+			u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf);//9像素点高字符库
+			u8g2_DrawStr(&u8g2, 21, 59, ":");//小电驴后冒号，表示速度
+			u8g2_DrawStr(&u8g2, 103, 15, ":");//硬币图标后冒号，表示硬币数量
+			sprintf(str,"%.2fm/s",v);
+			u8g2_DrawStr(&u8g2, 32, 59, str);//小车实际速度
+			sprintf(str,"%d",coinCounter);
+			u8g2_DrawStr(&u8g2, 114, 15, str);//硬币实际数量
 		}
+		else{
+			u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t);//图标大全
+			u8g2_DrawGlyph(&u8g2,82,20,0x0047);//硬币数量显示图标
 		else{
 			u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t);//图标大全
 			u8g2_DrawGlyph(&u8g2,82,20,0x0047);//硬币数量显示图标
