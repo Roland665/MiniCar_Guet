@@ -11,6 +11,9 @@
 #include "vSensor.h"
 #include "PID.h"
 #include "OLED.h"
+#include "metal_detection.h"
+#include "beep.h"
+#include "track.h"
 
 /******************************* 宏定义 ************************************/
 /*最多可以存储 2 个 u8类型变量的队列 */
@@ -43,15 +46,19 @@ static TaskHandle_t Tracking_Task_Handle = NULL;
 static TaskHandle_t Selfcruising_Task_Handle = NULL;
 /* OLEDShowing 任务句柄*/
 static TaskHandle_t OLEDShowing_Task_Handle = NULL;
+/* MetalDetection 任务句柄*/
+static TaskHandle_t MetalDetection_Task_Handle = NULL;
 /********************************** 内核对象句柄 *********************************/
-static SemaphoreHandle_t printfSemphr_Handle = NULL;/* 串口打印互斥信号量句柄*/
-
-static SemaphoreHandle_t vSensorLCountHandle = NULL;//左测速传感器计数信号量句柄
-static SemaphoreHandle_t vSensorRCountHandle = NULL;//右测速传感器计数信号量句柄
-
-static QueueHandle_t ReplaceVHandle = NULL;//左轮待修正速度消息队列句柄
-
-static QueueHandle_t wirelessCommandHandle = NULL;//无线控制命令消息队列句柄
+/* 金属探测器二值信号量句柄*/
+//static SemaphoreHandle_t MetalSemphr_Handle = NULL;
+/*左测速传感器计数信号量句柄*/
+static SemaphoreHandle_t vSensorLCountHandle = NULL;
+/*右测速传感器计数信号量句柄*/
+static SemaphoreHandle_t vSensorRCountHandle = NULL;
+/*左轮待修正速度消息队列句柄*/
+static QueueHandle_t ReplaceVHandle = NULL;
+/*无线控制命令消息队列句柄*/
+static QueueHandle_t wirelessCommandHandle = NULL;
 /******************************* 全局变量声明 ************************************/
 /* 空闲任务任务堆栈 */
 static StackType_t Idle_Task_Stack[configMINIMAL_STACK_SIZE];
@@ -83,7 +90,10 @@ static StackType_t Selfcruising_Task_Stack[128];
 /* Tracking 任务堆栈 */
 static StackType_t Tracking_Task_Stack[128];
 /* OLEDShowing 任务堆栈 */
-static StackType_t OLEDShowing_Task_Stack[128];
+#define OLEDShowingStackDeep 256
+static StackType_t OLEDShowing_Task_Stack[OLEDShowingStackDeep];
+/* MetalDetection 任务堆栈 */
+static StackType_t MetalDetection_Task_Stack[128];
 
 /* AppTaskCreate 任务控制块 */
 static StaticTask_t AppTaskCreate_TCB;
@@ -107,10 +117,12 @@ static StaticTask_t Selfcruising_Task_TCB;
 static StaticTask_t Tracking_Task_TCB;
 /* OLEDShowing 任务控制块 */
 static StaticTask_t OLEDShowing_Task_TCB;
+/* MetalDetection 任务控制块 */
+static StaticTask_t MetalDetection_Task_TCB;
 
 
 /* 信号量数据结构指针 */
-static StaticSemaphore_t printfSemphr_Structure;/*串口打印互斥信号量*/
+//static StaticSemaphore_t MetalSemphr_Structure;/*金属探测二值信号量*/
 static StaticSemaphore_t vSensorLCount_Structure;/*左测速传感器计数信号量*/
 static StaticSemaphore_t vSensorRCount_Structure;/*右测速传感器计数信号量*/
 
@@ -138,7 +150,18 @@ u16 rTime = 0;//右轮1脉冲计时
 u16 PWMVal[2] = {0};
 
 u8 carMode = 0;//小车运行模式 0-受Zigbee协调器控制 1-受循迹外设控制
-          
+
+u8 exti1WaitTime;//used for exti1 debounce
+
+u8 metalDiscoveryFlag = 0;//set 1 means this car found metal 
+
+u8 coinCounter;//coin number counter
+
+u8 trackingFlag = 0x11;//Six bit of one byte was used to means the state of car in road. The reflector is 1, the other is 0
+/*
+
+*/
+
 /*
 *************************************************************************
 *                             函数声明
@@ -151,11 +174,9 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
 									StackType_t **ppxTimerTaskStackBuffer, 
 									uint32_t *pulTimerTaskStackSize);
 
-static void xPrintf(char *format, ...);
 portFLOAT Filter(portFLOAT newValue, portFLOAT oldValue, portFLOAT alpha);
 static void AppTaskCreate(void);/* 用于创建任务 */
 static void LED_Task(void* parameter);//LED任务
-//static void KeyScan_Task(void* parameter);//按键扫描任务
 static void Motor_Task(void* parameter);//电机控制任务
 static void ListeningSensors_Task(void* parameter);//监听两个测速传感器
 static void lCalcVelocity_Task(void* parameter);//计算左轮速度任务
@@ -163,8 +184,9 @@ static void rCalcVelocity_Task(void* parameter);//计算右轮速度任务
 static void AnalyseCommand_Task(void* parameter);//分析命令任务
 static void PIDCalculator_Task(void* parameter);//PID计算任务
 static void Selfcruising_Task(void* parameter);//自巡航任务
-static void Tracking_Task(void* parameter);//循迹任务
+static void Tracking_Task(void* parameter);//循迹任务 
 static void OLEDShowing_Task(void* parameter);//OLED显示任务
+static void MetalDetection_Task(void* parameter);//task of detecting the metal
 static void Setup(void);/* 用于初始化板载相关资源 */
 
 
@@ -195,26 +217,25 @@ int main(void){
   */
 static void Setup(void){
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);	//4bit都用于设置抢占优先级
-//	delay_init();
 	MTS_Init();
-	LED_Init();	  		//LED初始化
-	USART1_Init(115200);//串口1初始化
+	LED_Init();	  		
+	BEEP_Init();
+	USART1_Init(115200);
 	USART2_Init(115200);
-	Key_Init();
 	TIM2_Int_Init(10-1,7200-1);//定时器时钟72M，分频系数7200，所以72M/7200=10Khz的计数频率，计数10次为1ms
 	vSensors_Init();
-	
-//	OLED_Init();
+	Metal_Detection_Init();
+	track_Init();
 }
 
 static void AppTaskCreate(void){
 	taskENTER_CRITICAL();           //进入临界区
-	//串口打印互斥信号量
-	printfSemphr_Handle = xSemaphoreCreateMutexStatic(&printfSemphr_Structure);//创建互斥信号量
-	if(printfSemphr_Handle != NULL)
-		printf("串口打印互斥信号量创建成功~\r\n");
-	else
-		printf("串口打印互斥创建失败~\r\n");
+	//信号量
+//	MetalSemphr_Handle = xSemaphoreCreateMutexStatic(&MetalSemphr_Structure);//创建互斥信号量
+//	if(MetalSemphr_Handle != NULL)
+//		printf("金属探测二值信号量创建成功~\r\n");
+//	else
+//		printf("金属探测二值信号量创建失败~\r\n");
 
 	//记录左车轮光电测速传感器获取的脉冲
 	vSensorLCountHandle = xSemaphoreCreateCountingStatic(vSensorCountMax,			//最大计数值
@@ -360,18 +381,44 @@ static void AppTaskCreate(void){
 	else
 		printf("Selfcruising任务创建失败!\r\n");
 	
+	/* 创建 Tracking_Task 任务 */
+	Tracking_Task_Handle = xTaskCreateStatic((TaskFunction_t	)Tracking_Task,			//任务函数
+                                        (const char* 	)"Tracking_Task",		//任务名称
+                                        (uint32_t 		)128,				//任务栈深
+                                        (void* 		  	)NULL,				//传递给任务函数的参数
+                                        (UBaseType_t 	)4, 				//任务优先级
+                                        (StackType_t*   )Tracking_Task_Stack,	//任务堆栈
+                                        (StaticTask_t*  )&Tracking_Task_TCB);	//任务控制块   
+	if(Tracking_Task_Handle != NULL)/* 创建成功 */
+		printf("Tracking任务创建成功!\r\n");
+	else
+		printf("Tracking任务创建失败!\r\n");
+	
 	/* 创建 OLEDShowing_Task 任务 */
 	OLEDShowing_Task_Handle = xTaskCreateStatic((TaskFunction_t	)OLEDShowing_Task,			//任务函数
                                         (const char* 	)"OLEDShowing_Task",		//任务名称
-                                        (uint32_t 		)128,				//任务栈深
+                                        (uint32_t 		)OLEDShowingStackDeep,				//任务栈深
                                         (void* 		  	)NULL,				//传递给任务函数的参数
-                                        (UBaseType_t 	)5, 				//任务优先级
+                                        (UBaseType_t 	)4, 				//任务优先级
                                         (StackType_t*   )OLEDShowing_Task_Stack,	//任务堆栈
                                         (StaticTask_t*  )&OLEDShowing_Task_TCB);	//任务控制块   
 	if(OLEDShowing_Task_Handle != NULL)/* 创建成功 */
 		printf("OLEDShowing任务创建成功!\r\n");
 	else
 		printf("OLEDShowing任务创建失败!\r\n");
+	
+	/* 创建 MetalDetection_Task 任务 */
+	MetalDetection_Task_Handle = xTaskCreateStatic((TaskFunction_t	)MetalDetection_Task,			//任务函数
+                                        (const char* 	)"MetalDetection_Task",		//任务名称
+                                        (uint32_t 		)128,				//任务栈深
+                                        (void* 		  	)NULL,				//传递给任务函数的参数
+                                        (UBaseType_t 	)4, 				//任务优先级
+                                        (StackType_t*   )MetalDetection_Task_Stack,	//任务堆栈
+                                        (StaticTask_t*  )&MetalDetection_Task_TCB);	//任务控制块   
+	if(MetalDetection_Task_Handle != NULL)/* 创建成功 */
+		printf("MetalDetection任务创建成功!\r\n");
+	else
+		printf("MetalDetection任务创建失败!\r\n");
 
 	vTaskDelete(AppTaskCreate_Handle); //删除AppTaskCreate任务 
 	vTaskSuspend(Motor_Task_Handle);//挂起电机任务，因为车还没启动
@@ -382,48 +429,114 @@ static void AppTaskCreate(void){
 }
 
 /**
+  * @brief main body of metal-detection
+  */
+static void MetalDetection_Task(void* parameter){
+	while(1) {
+		if(1 == GPIO_ReadInputDataBit(METAL_DET_GPIO,METAL_DET_Pin)){
+			vTaskDelay(20);
+			coinCounter++;
+			//挂起一堆任务
+//			vTaskSuspend(Tracking_Task_Handle);
+			vTaskSuspend(Selfcruising_Task_Handle);
+			vTaskSuspend(PIDCalculator_Task_Handle);
+			vTaskSuspend(Motor_Task_Handle);
+			metalDiscoveryFlag = 1;
+			//响两秒蜂鸣器
+			BEEP = 1;
+			vTaskDelay(100);
+			BEEP = 0;
+			vTaskDelay(300);
+			BEEP = 1;
+			vTaskDelay(100);
+			BEEP = 0;
+			vTaskDelay(1000);
+			BEEP = 1;
+			vTaskDelay(100);
+			BEEP = 0;
+			vTaskDelay(300);
+			BEEP = 1;
+			vTaskDelay(100);
+			BEEP = 0;
+			metalDiscoveryFlag = 0;
+			//解挂一堆任务
+//			vTaskResume(Tracking_Task_Handle);
+			vTaskResume(Selfcruising_Task_Handle);
+			vTaskResume(PIDCalculator_Task_Handle);
+			if(lTargetV > 0.1 && rTargetV > 0.1)
+				vTaskResume(Motor_Task_Handle);
+			while(1 == GPIO_ReadInputDataBit(METAL_DET_GPIO,METAL_DET_Pin));
+			vTaskDelay(20);
+		}
+	}
+}
+
+/**
 
   * @brief OLED显示任务主体
   * @brief  
   * @param    
   * @retval    
   */
-static void OLEDShowing_Task(void* parameter){
-	u8 x = 0,y = 0;                           
+static void OLEDShowing_Task(void* parameter){      
+	char str[128] = {0};//需要显示的字符串临时存放处
 	//初始化u8g2      
-	u8g2_t u8g2;                                                               // a structure which will contain all the data for one display
-	u8g2_Setup_ssd1306_i2c_128x64_noname_f(&u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);// init u8g2 structure
-	u8g2_InitDisplay(&u8g2);                                                                      // send init sequence to the display, display is in sleep mode after this,
-	u8g2_SetPowerSave(&u8g2, 0);                                       // wake up display
+	u8g2_t u8g2;               		// a structure which will contain all the data for one display
+	u8g2_Setup_ssd1306_i2c_128x64_noname_f(&u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);
+	u8g2_InitDisplay(&u8g2);        // send init sequence to the display, display is in sleep mode after this
+	u8g2_SetPowerSave(&u8g2, 0);    //place 1 means open power-saveing, you`ll see nothing in the screem 
+	float v = 0;
 	while (1){
-		/* Begin of U8G2*/
-		u8g2_ClearBuffer(&u8g2);
-		u8g2_SetFont(&u8g2, u8g2_font_10x20_mf);
-		u8g2_DrawStr(&u8g2, x,y,"Dataxxx");
-		if(x >= 70)
-		{
-			x = y = 0;
-		}
-		else
-		{
-			x++;
-			y++;
-		}
+		u8g2_ClearBuffer(&u8g2);           //clear the u8g2 buffer
+		if(metalDiscoveryFlag == 0){
+			vTaskDelay(10);
+			v = (lVelocity + rVelocity) * 0.5;
+			u8g2_ClearBuffer(&u8g2);           // wake up display
+			u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t);//图标大全
+			u8g2_DrawGlyph(&u8g2,82,20,0x0047);//硬币数量显示图标
+			u8g2_DrawGlyph(&u8g2,0,63,0x029E);//小电驴图标
 
-		u8g2_SendBuffer(&u8g2);
-		/* End of U8G2 */
+			u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf);//9像素点高字符库
+			u8g2_DrawStr(&u8g2, 21, 59, ":");//小电驴后冒号，表示速度
+			u8g2_DrawStr(&u8g2, 103, 15, ":");//硬币图标后冒号，表示硬币数量
+			sprintf(str,"%.2fm/s",v);
+			u8g2_DrawStr(&u8g2, 32, 59, str);//小车实际速度
+			sprintf(str,"%d",coinCounter);
+			u8g2_DrawStr(&u8g2, 114, 15, str);//硬币实际数量
+		}
+		else{
+			u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t);//图标大全
+			u8g2_DrawGlyph(&u8g2,82,20,0x0047);//硬币数量显示图标
+
+			u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf);//9像素点高字符库
+			u8g2_DrawStr(&u8g2, 103, 15, ":");//硬币图标后冒号，表示硬币数量
+			sprintf(str,"%d",coinCounter);
+			u8g2_DrawStr(&u8g2, 114, 15, str);//硬币实际数量
+
+			u8g2_SetFont(&u8g2, u8g2_font_emoticons21_tr);//表情大全
+			u8g2_DrawGlyphX2(&u8g2,40,50,0x0030);//检测到硬币显示表情
+		}
+		u8g2_SendBuffer(&u8g2);//同步屏幕
 	}
 }
-/**
 
+/**
   * @brief 循迹 任务主体
-  * @brief  
   * @param    
   * @retval    
   */
 static void Tracking_Task(void* parameter){
-	while(1);
-
+	u16 GPIO_Pins[6] = {GPIO_Pin_10, GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_13, GPIO_Pin_14, GPIO_Pin_15};//红外模块引脚
+	u8 i;
+	while(1){
+//		printf("%d",trackingFlag);
+//		trackingFlag = 0;
+//		for(i = 0 ;i < 6; i++){
+//			trackingFlag |= GPIO_ReadInputDataBit(GPIOB, GPIO_Pins[i]);
+//			trac
+//		}
+		vTaskDelay(1000);
+	}
 }//自巡航任务
 
 
@@ -431,7 +544,6 @@ static void Tracking_Task(void* parameter){
 
   * @brief 自巡航 任务主体
   */
-u8 trackingFlag = 0x11;
 static void Selfcruising_Task(void* parameter){
 	while(1){
 		vTaskDelay(1);
@@ -535,14 +647,14 @@ static void AnalyseCommand_Task(void* parameter){
 			xReturn = xQueueReceive(wirelessCommandHandle, &commands[i], portMAX_DELAY);
 		}
 		if(xReturn != pdPASS)
-			xPrintf("命令消息接收失败\r\n");
+			printf("命令消息接收失败\r\n");
 		printf("成功接收控制命令：%d\r\n",commands[1]);
 		
 		if(commands[0] == 0x00){
 			carMode = 0;
 			lTargetV = 0;
 			rTargetV = 0;
-			xPrintf("停车~\r\n");
+			printf("停车~\r\n");
 			vTaskSuspend(lCalcVelocity_Task_Handle);//挂起测速任务，因为车还没启动
 			vTaskSuspend(rCalcVelocity_Task_Handle);//挂起测速任务，因为车还没启动
 			PWMVal[0] = 0;
@@ -638,7 +750,7 @@ static void ListeningSensors_Task(void* parameter){
 			if(L == 1){
 				xReturn = xSemaphoreGive(vSensorLCountHandle);
 				if(xReturn != pdTRUE)
-					xPrintf("左测速器信号量赋值失败，错误码为：%d\r\n",xReturn);
+					printf("左测速器信号量赋值失败，错误码为：%d\r\n",xReturn);
 			}
 			L = !L;
 		}
@@ -646,7 +758,7 @@ static void ListeningSensors_Task(void* parameter){
 			if(R == 1){
 				xReturn = xSemaphoreGive(vSensorRCountHandle);
 				if(xReturn != pdTRUE)
-					xPrintf("右测速器信号量赋值失败，错误码为：%d\r\n",xReturn);
+					printf("右测速器信号量赋值失败，错误码为：%d\r\n",xReturn);
 			}
 			R = !R;
 		}
@@ -702,32 +814,6 @@ static void LED_Task(void* parameter){
 		TestLED = 1;
 		vTaskDelay(500/portTICK_PERIOD_MS);/*延时500ms*/
 	}
-}
-
-
-/**
-  * @brief    优化FreeRTOS的printf函数
-  * @param    parameter
-  * @retval   void
-  */
-void xPrintf(char *format, ...)
-{
-    char  buf_str[200 + 1];
-    va_list   v_args;
-
-    va_start(v_args, format);
-   (void)vsnprintf((char       *)&buf_str[0],
-                   (size_t      ) sizeof(buf_str),
-                   (char const *) format,
-                                  v_args);
-    va_end(v_args);
-
-	/* 互斥信号量 */
-	xSemaphoreTake(printfSemphr_Handle, portMAX_DELAY);
-
-    printf("%s", buf_str);
-
-  	xSemaphoreGive(printfSemphr_Handle);
 }
 
 
@@ -820,6 +906,9 @@ void TIM2_IRQHandler(void){
 	if(TIM_GetITStatus(TIM2,TIM_IT_Update)==SET){ //溢出中断
 		lTime++;
 		rTime++;
+		if(exti1WaitTime < 10)
+			exti1WaitTime++;
+		
 		if(lTime == 300)
 			lVelocity = 0;
 		if(rTime == 300)
@@ -874,3 +963,22 @@ void TIM2_IRQHandler(void){
 		TIM_ClearITPendingBit(TIM2,TIM_IT_Update);  //清除中断标志位
 	}
 }
+
+//EXTI1_IRQHandler in the service of Metal detection 
+//void EXTI1_IRQHandler(void){
+//	UBaseType_t xReturn = pdPASS;
+//    if(EXTI_GetITStatus(EXTI_Line1)!=RESET){//判断某个线上的中断是否发生
+//		if(exti1WaitTime > 2000){
+//			exti1WaitTime = 0;
+//			while(PAin(1) == 0) {
+//				EXTI_ClearITPendingBit(EXTI_Line1); //清除 LINE 上的中断标志位
+//				return;
+//			}
+//		}
+//		//如果外部中断持续被触发2s，释放信号量
+//		xReturn = xSemaphoreGiveFromISR(MetalSemphr_Handle,NULL);
+//		if(xReturn != pdPASS)
+//			printf("金属探测信号量释放失败");
+//		EXTI_ClearITPendingBit(EXTI_Line1); //清除 LINE 上的中断标志位
+//    }
+//}
