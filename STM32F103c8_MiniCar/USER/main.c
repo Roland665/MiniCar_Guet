@@ -436,13 +436,14 @@ static void AppTaskCreate(void){
 static void MetalDetection_Task(void* parameter){
 	while(1) {
 		if(1 == GPIO_ReadInputDataBit(METAL_DET_GPIO,METAL_DET_Pin)){
-			vTaskDelay(20);
+			MTLEN(TIM3,0);
+			MTREN(TIM3,0);
 			coinCounter++;
+			vTaskSuspend(Motor_Task_Handle);
 			//挂起一堆任务
 //			vTaskSuspend(Tracking_Task_Handle);
 			vTaskSuspend(Selfcruising_Task_Handle);
 			vTaskSuspend(PIDCalculator_Task_Handle);
-			vTaskSuspend(Motor_Task_Handle);
 			metalDiscoveryFlag = 1;
 			//响两秒蜂鸣器
 			BEEP = 1;
@@ -468,7 +469,7 @@ static void MetalDetection_Task(void* parameter){
 			if(lTargetV > 0.1 && rTargetV > 0.1)
 				vTaskResume(Motor_Task_Handle);
 			while(1 == GPIO_ReadInputDataBit(METAL_DET_GPIO,METAL_DET_Pin));
-			vTaskDelay(20);
+			vTaskDelay(100);
 		}
 	}
 }
@@ -580,52 +581,52 @@ static void Selfcruising_Task(void* parameter){
 					}
 				}
 				else if(trackingFlag == 0x08){//0b001000
-					//the car shifted a little bit to the left
+					//the car shifted a little bit to the right
 					lTargetV -= 1;
 					rTargetV += 1;
 				}
 				else if(trackingFlag == 0x18){//0x011000
-					//the car shifted a bit to the left
+					//the car shifted a bit to the right
 					lTargetV -= 1.2;
 					rTargetV += 1.2;
 				}
 				else if(trackingFlag == 0x10){//0x010000
-					//the car shifted to the left
+					//the car shifted to the right
 					lTargetV -= 1.4;
 					rTargetV += 1.4;
 				}
 				else if(trackingFlag == 0x30){//0x110000
-					//the car shifted much to the left
+					//the car shifted much to the right
 					lTargetV -= 1.6;
 					rTargetV += 1.6;
 				}
 				else if(trackingFlag == 0x20){//0x100000
-					//the car shifted too much to the left
+					//the car shifted too much to the right
 					lTargetV = 0;
 					rTargetV += 0.1;
 				}
 				else if(trackingFlag == 0x04){//0b000100 
-					//the car shifted a little bit to the right
+					//the car shifted a little bit to the left
 					rTargetV -= 0.8;
 					lTargetV += 1;
 				}
 				else if(trackingFlag == 0x06){//0b000110
-					//the car shifted a bit to the right
+					//the car shifted a bit to the left
 					rTargetV -= 1;
 					lTargetV += 1.2;
 				}
 				else if(trackingFlag == 0x02){//0b000010
-					//the car shifted a bit to the right
+					//the car shifted a bit to the left
 					rTargetV -= 1.2;
 					lTargetV += 1.4;
 				}
 				else if(trackingFlag == 0x03){//0b000011 
-					//the car shifted much to the right
+					//the car shifted much to the left
 					rTargetV -= 1.4;
 					lTargetV += 1.6;
 				}
 				else if(trackingFlag == 0x01){//0b000001
-					//the car shifted too much to the right
+					//the car shifted too much to the left
 					rTargetV = 0;
 					lTargetV += 0.1;
 				}
@@ -633,7 +634,7 @@ static void Selfcruising_Task(void* parameter){
 					//处于不正常状态，停车
 					lTargetV = 0;
 					rTargetV = 0;
-				}				
+				}
 				if(lTargetV == 0 && rTargetV == 0){
 					lTargetV = lV;
 					rTargetV = rV;
@@ -1046,22 +1047,3 @@ void TIM2_IRQHandler(void){
 		TIM_ClearITPendingBit(TIM2,TIM_IT_Update);  //清除中断标志位
 	}
 }
-
-//EXTI1_IRQHandler in the service of Metal detection 
-//void EXTI1_IRQHandler(void){
-//	UBaseType_t xReturn = pdPASS;
-//    if(EXTI_GetITStatus(EXTI_Line1)!=RESET){//判断某个线上的中断是否发生
-//		if(exti1WaitTime > 2000){
-//			exti1WaitTime = 0;
-//			while(PAin(1) == 0) {
-//				EXTI_ClearITPendingBit(EXTI_Line1); //清除 LINE 上的中断标志位
-//				return;
-//			}
-//		}
-//		//如果外部中断持续被触发2s，释放信号量
-//		xReturn = xSemaphoreGiveFromISR(MetalSemphr_Handle,NULL);
-//		if(xReturn != pdPASS)
-//			printf("金属探测信号量释放失败");
-//		EXTI_ClearITPendingBit(EXTI_Line1); //清除 LINE 上的中断标志位
-//    }
-//}
