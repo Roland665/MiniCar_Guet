@@ -188,6 +188,9 @@ u8 AckFlag = 0;//This flag will be set 1 when the car recive another device`s an
 
 uint64_t runTime = 0;//Count the time from the car start run to stop run 
 u8 runTimeEF = 0;//runTime enable flag , set 1 enable runTime to count
+
+uint16_t speedUpTime = 2000;//2s to speed up
+u8 speedUpTimeEF = 0;
 /*
 *************************************************************************
 *                             函数声明
@@ -652,8 +655,8 @@ static void Run_Task(void *parameter)
 							nodeCounter = 5;
 					}
 					// 处于不正常状态，speed down
-					lTargetV = lV-7;
-					rTargetV = rV-15;
+					lTargetV = v1[0]-3;
+					rTargetV = v1[1]-7;
 				}
             }
         }
@@ -1065,13 +1068,28 @@ void TIM2_IRQHandler(void)
         if (nodeCounterCD < 1000)
             nodeCounterCD++;
 
-		if(changeRoadTime < CHANGEROADTIME_MAX){
+		if(changeRoadTime < CHANGEROADTIME_MAX)
 			changeRoadTime++;
-        }
         
         if(runTimeEF == 1)
             runTime++;
 
+        if(speedUpTimeEF == 1){
+            speedUpTime--;
+            if(speedUpTime == 0){
+                // speed down
+                lV     -= 8;
+                rV     -= 17;
+                v1[0]  -= 6;
+                v1[1]  -= 17;
+                v2[0]  -= 7;
+                v2[1]  -= 20;
+                v3[0]  -= 13;
+                v3[1]  -= 23;
+                pwmerr -= 4;
+                speedUpTimeEF = 0;
+            }
+        }
         if (nodeCounter == 1) {
             // speed up
             lV     += 8;
@@ -1085,17 +1103,9 @@ void TIM2_IRQHandler(void)
             pwmerr += 4;
 			nodeCounter = 3;
 			nodeCounterCD = 0;
-        } else if (nodeCounter == 2){
-            // speed down
-            lV     -= 8;
-            rV     -= 17;
-            v1[0]  -= 6;
-            v1[1]  -= 17;
-            v2[0]  -= 7;
-            v2[1]  -= 20;
-            v3[0]  -= 13;
-            v3[1]  -= 23;
-            pwmerr -= 4;
+            speedUpTimeEF = 1;
+        } 
+        else if (nodeCounter == 2){
 			nodeCounter = 4;
 			nodeCounterCD = 0;
         }
