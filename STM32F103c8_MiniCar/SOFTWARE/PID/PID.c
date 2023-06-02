@@ -27,11 +27,11 @@ PID* PID_Create_Object(float kp, float ki, float kd){
  * @param    err_new:最新的差值
  * @retval   
  */
-float PID_Classic(PID* pid, float err_new){
-    float result;
+int PID_Classic(PID* pid, int err_new){
+    int result;
     pid->err_new = err_new;
     pid->intergral += pid->err_new;
-    result = pid->kp*pid->err_new + pid->ki*pid->intergral + pid->kd*(pid->err_old - pid->err_new);
+    result = (int)pid->kp*pid->err_new + pid->ki*pid->intergral + pid->kd*(pid->err_new - pid->err_old);
     pid->err_old = pid->err_new;
     return result;
 }

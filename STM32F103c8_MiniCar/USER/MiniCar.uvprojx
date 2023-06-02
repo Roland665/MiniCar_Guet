@@ -501,7 +501,7 @@
             <File>
               <FileName>startup_stm32f10x_md.s</FileName>
               <FileType>2</FileType>
-              <FilePath>..\CORE\startup_stm32f10x_md.s</FilePath>
+              <FilePath>F:\GitRepository\MiniCar_Guet\STM32F103c8_MiniCar\CORE\startup_stm32f10x_md.s</FilePath>
             </File>
           </Files>
         </Group>
