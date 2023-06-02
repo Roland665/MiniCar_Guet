@@ -24,6 +24,7 @@
 - 优化了指令种类，删除了原指令01
 - 取消了浮点数，都由整型数替代
 - 取消了PID，开环控制对于1.x版本的小车循迹模块更合适
+- 补全了完成题目要求的所有必要通信命令
 
 缺点:
 - 感觉测速还可以优化，合并和测速有关的任务，取消信号量，直接顺序执行
@@ -35,9 +36,13 @@
 #define REPLACE_V_QUEUE_LENGTH 2
 #define REPLACE_V_ITEM_SIZE    sizeof(u8)
 
-/*最多可以存储 3 个 u8类型变量的队列 */
+/*最多可以存储 7 个 u8类型变量的队列 */
 #define WIRELESSCOMMAND_QUEUE_LENGTH 7
 #define WIRELESSCOMMAND_ITEM_SIZE    sizeof(u8)
+
+/*最多可以存储 2 个 u8类型变量的队列 */
+#define CUSTOMDATA_QUEUE_LENGTH 2
+#define CUSTOMDATA_ITEM_SIZE    sizeof(u8)
 /**************************** 任务句柄 ********************************/
 /* AppTaskCreate 任务句柄 */
 static TaskHandle_t AppTaskCreate_Handle = NULL;
@@ -57,9 +62,9 @@ static TaskHandle_t Run_Task_Handle = NULL;
 static TaskHandle_t OLEDShowing_Task_Handle = NULL;
 /* MetalDetection 任务句柄*/
 static TaskHandle_t MetalDetection_Task_Handle = NULL;
+/* SendCustomData 任务句柄*/
+static TaskHandle_t SendCustomData_Task_Handle = NULL;
 /********************************** 内核对象句柄 *********************************/
-/* 金属探测器二值信号量句柄*/
-// static SemaphoreHandle_t MetalSemphr_Handle = NULL;
 /*左测速传感器计数信号量句柄*/
 static SemaphoreHandle_t vSensorLCountHandle = NULL;
 /*右测速传感器计数信号量句柄*/
@@ -68,6 +73,8 @@ static SemaphoreHandle_t vSensorRCountHandle = NULL;
 static QueueHandle_t ReplaceVHandle = NULL;
 /*无线控制命令消息队列句柄*/
 static QueueHandle_t wirelessCommandHandle = NULL;
+/*待发送私有协议消息队列句柄*/
+static QueueHandle_t customDataHandle = NULL;
 /******************************* 全局变量声明 ************************************/
 /* 空闲任务任务堆栈 */
 static StackType_t Idle_Task_Stack[configMINIMAL_STACK_SIZE];
@@ -98,6 +105,9 @@ static StackType_t Run_Task_Stack[RunStackDeep];
 static StackType_t OLEDShowing_Task_Stack[OLEDShowingStackDeep];
 /* MetalDetection 任务堆栈 */
 static StackType_t MetalDetection_Task_Stack[128];
+/* SendCustomData 任务堆栈 */
+#define SendCustomDataStackDeep 128
+static StackType_t SendCustomData_Task_Stack[SendCustomDataStackDeep];
 
 /* AppTaskCreate 任务控制块 */
 static StaticTask_t AppTaskCreate_TCB;
@@ -117,19 +127,22 @@ static StaticTask_t Run_Task_TCB;
 static StaticTask_t OLEDShowing_Task_TCB;
 /* MetalDetection 任务控制块 */
 static StaticTask_t MetalDetection_Task_TCB;
+/* SendCustomData 任务控制块 */
+static StaticTask_t SendCustomData_Task_TCB;
 
 /* 信号量数据结构指针 */
-// static StaticSemaphore_t MetalSemphr_Structure;/*金属探测二值信号量*/
 static StaticSemaphore_t vSensorLCount_Structure; /*左测速传感器计数信号量*/
 static StaticSemaphore_t vSensorRCount_Structure; /*右测速传感器计数信号量*/
 
 /* 消息队列数据结构指针 */
 static StaticQueue_t ReplaceV_Structure;
 static StaticQueue_t wirelessCommand_Structure;
+static StaticQueue_t customData_Structure;
 
 /* 消息队列的存储区域，大小至少有 uxQueueLength * uxItemSize 个字节 */
 uint8_t ReplaceVStorageArea[REPLACE_V_QUEUE_LENGTH * REPLACE_V_ITEM_SIZE];
 uint8_t wirelessCommandStorageArea[WIRELESSCOMMAND_QUEUE_LENGTH * WIRELESSCOMMAND_ITEM_SIZE];
+uint8_t customDataStorageArea[CUSTOMDATA_QUEUE_LENGTH * CUSTOMDATA_ITEM_SIZE];
 
 /* 普通全局变量 */
 int lVelocity; // 左轮速度(m/s)
@@ -157,10 +170,6 @@ u8 coinCounter; // coin number counter
 u8 carState     = 0; // means the car`s move state, 0 is along the line, 1 is turn left slowly, 2 is turn left quickly, 3 is turn right slowly, 4 is turn right quickly
 u8 trackingFlag = 0; // Six bit of one byte was used to means the state of car in road. The reflector is 1, the other is 0
 
-float kp = 1;
-float ki = 0;
-float kd = 0;
-
 u8 nodeCounter    = 0; // When car meet the black node in the line, this counter++
 u16 nodeCounterCD = 0; // the nodeCounter CD
 int v1[2]         = {0x12, 0x38};
@@ -174,6 +183,8 @@ int rV            = 40; // 沿线行驶时右轮推荐速度
 u8 runRoad = 1;// this variable set 1 means car will along the out line, set 2 this car will along the in line
 u16 CHANGEROADTIME_MAX = 0x4a*10;
 u16 changeRoadTime = 0xffff;//This variable means the car begin change time to end change time  
+
+u8 AckFlag = 0;//This flag will be set 1 when the car recive another device`s answer back
 /*
 *************************************************************************
 *                             函数声明
@@ -196,6 +207,7 @@ static void AnalyseCommand_Task(void *parameter);   // 分析命令任务
 static void Run_Task(void *parameter);              // 自巡航任务
 static void OLEDShowing_Task(void *parameter);      // OLED显示任务
 static void MetalDetection_Task(void *parameter);   // task of detecting the metal
+static void SendCustomData_Task(void *parameter);   // task of send custom data
 static void Setup(void);                            /* 用于初始化板载相关资源 */
 
 int main(void)
@@ -283,6 +295,17 @@ static void AppTaskCreate(void)
         printf("wirelessCommand队列创建成功!\r\n");
     else
         printf("wirelessCommand队列创建失败!\r\n");
+
+    // 存储待发出私有协议数据
+    customDataHandle = xQueueCreateStatic(CUSTOMDATA_QUEUE_LENGTH, // 队列深度
+                                               CUSTOMDATA_ITEM_SIZE,    // 队列数据单元的单位
+                                               customDataStorageArea,   // 队列的存储区域
+                                               &customData_Structure    // 队列的数据结构
+    );
+    if (customDataHandle != NULL) /* 创建成功 */
+        printf("customData队列创建成功!\r\n");
+    else
+        printf("customData队列创建失败!\r\n");
 
     /* 创建LED_Task任务 */
     LED_Task_Handle = xTaskCreateStatic((TaskFunction_t)LED_Task,       // 任务函数
@@ -388,9 +411,58 @@ static void AppTaskCreate(void)
     else
         printf("MetalDetection任务创建失败!\r\n");
 
+    /* 创建 SendCustomData_Task 任务 */
+    SendCustomData_Task_Handle = xTaskCreateStatic((TaskFunction_t)SendCustomData_Task,       // 任务函数
+                                                   (const char *)"SendCustomData_Task",       // 任务名称
+                                                   (uint32_t)SendCustomDataStackDeep,                             // 任务栈深
+                                                   (void *)NULL,                              // 传递给任务函数的参数
+                                                   (UBaseType_t)4,                            // 任务优先级
+                                                   (StackType_t *)SendCustomData_Task_Stack,  // 任务堆栈
+                                                   (StaticTask_t *)&SendCustomData_Task_TCB); // 任务控制块
+    if (SendCustomData_Task_Handle != NULL)                                                   /* 创建成功 */
+        printf("SendCustomData任务创建成功!\r\n");
+    else
+        printf("SendCustomData任务创建失败!\r\n");
+
     vTaskDelete(AppTaskCreate_Handle); // 删除AppTaskCreate任务
     printf("======进入FreeRTOS!======\r\n");
     taskEXIT_CRITICAL(); // 退出临界区
+}
+
+/**
+ * @brief main body of send custom data
+ */
+static void SendCustomData_Task(void *parameter){
+    UBaseType_t xReturn = pdPASS;
+    u8 i = 0;
+    u8 Data[CUSTOMDATA_QUEUE_LENGTH];
+    u8 breakCounter = 0;
+    while(1){
+        for (i = 0; i < CUSTOMDATA_QUEUE_LENGTH; i++) {
+            xReturn = xQueueReceive(customDataHandle, &Data[i], portMAX_DELAY);
+        }
+        if (xReturn != pdPASS)
+            printf("命令消息接收失败\r\n");
+        AckFlag = 0;
+        breakCounter = 0;
+        while(AckFlag != 1 && breakCounter < 6){
+            //循环发送数据，直到收到应答，1.8秒内没收到就不发了
+			USART_SendData(USART2, 0xC1);         //向串口1发送数据
+			while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+			USART_SendData(USART2, 0xC2);         //向串口1发送数据
+			while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+			USART_SendData(USART2, 0xC3);         //向串口1发送数据
+			while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+			USART_SendData(USART2, 0xC4);         //向串口1发送数据
+			while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+            for(i = 0; i < CUSTOMDATA_QUEUE_LENGTH; i++){
+                USART_SendData(USART2, Data[i]);         //向串口1发送数据
+                while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+            }
+            vTaskDelay(300);
+            breakCounter++;
+        }
+    }
 }
 
 /**
@@ -398,6 +470,9 @@ static void AppTaskCreate(void)
  */
 static void MetalDetection_Task(void *parameter)
 {
+    UBaseType_t xReturn = pdPASS;
+    u8 beSendData[2] = {0x09,0x00};
+	u8 i = 0;
     while (1) {
         if (nodeCounter == 0 && 1 == GPIO_ReadInputDataBit(METAL_DET_GPIO, METAL_DET_Pin)) {
             MTLEN(TIM3, 0);
@@ -405,6 +480,13 @@ static void MetalDetection_Task(void *parameter)
             coinCounter++;
             // 挂起任务
             vTaskSuspend(Run_Task_Handle);
+            // 同步硬币数量
+            beSendData[1] = coinCounter;
+			for(i = 0; i < CUSTOMDATA_QUEUE_LENGTH; i++){				
+				xReturn = xQueueSend(customDataHandle, &beSendData[i], 1000/portTICK_PERIOD_MS);
+				if(xReturn != pdPASS)
+					printf("硬币数量消息发送失败\r\n");
+			}
             metalDiscoveryFlag = 1;
             // 响两秒蜂鸣器
             BEEP = 1;
@@ -488,7 +570,6 @@ static void OLEDShowing_Task(void *parameter)
 }
 
 /**
-
   * @brief Run 任务主体
   */
 
@@ -496,10 +577,6 @@ static void Run_Task(void *parameter)
 {
     u16 GPIO_Pins[6] = {GPIO_Pin_10, GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_13, GPIO_Pin_14, GPIO_Pin_15}; // 红外模块引脚
     u8 i;
-
-    //	int deltaV = rV - lV;
-    PID *lVelocityPID = PID_Create_Object(kp, ki, kd);
-    PID *rVelocityPID = PID_Create_Object(kp, ki, kd);
 
     int ignoreErr = 0; // 忽视速度上的误差值
     while (1) {
@@ -569,22 +646,6 @@ static void Run_Task(void *parameter)
         }
         rReplaceV = rTargetV;
         lReplaceV = lTargetV;
-        // Depends on PID to calculate the velocity of replacement
-        //  if(lTargetV >= 1 || rTargetV >= 1){
-        //  	if(rTargetV != rVelocity){
-        //  		rReplaceV = PID_Classic(rVelocityPID, rTargetV-rVelocity);
-        //  	}
-        //  	if(lTargetV != lVelocity){
-        //  		lReplaceV = PID_Classic(lVelocityPID, lTargetV-lVelocity);
-        //  	}
-        //  }
-        //  else{
-        //  	//停车了，那就清空PID对象
-        //  	rVelocityPID->intergral = 0;
-        //  	rVelocityPID->err_old = 0;
-        //  	lVelocityPID->intergral = 0;
-        //  	lVelocityPID->err_old = 0;
-        //  }
 
         // Adjust pwm duty ratio to speed control
         // left
@@ -634,7 +695,6 @@ static void Run_Task(void *parameter)
             PWMVal[1] = 0;
             MTREN(TIM3, PWMVal[1]);
         }
-        //	vTaskDelay(1);
     }
 }
 
@@ -757,6 +817,9 @@ static void AnalyseCommand_Task(void *parameter)
 			v3[0] -= 2;
 			v3[1] += 4;
 		}
+        else if(commands[0] == 0xFF){
+            AckFlag = 1;//收到应答
+        }
     }
 }
 
@@ -860,6 +923,8 @@ int Filter(float newValue, float oldValue, float alpha)
     newValue = (int)(alpha * newValue + (1 - alpha) * oldValue);
     return newValue;
 }
+
+
 
 /**
  * @brief    获取空闲任务的任务堆栈和任务控制块内存
@@ -1008,7 +1073,6 @@ void TIM2_IRQHandler(void)
             USART1_RX_STA = 0;
             usart1RXTime  = 0xFF; // 把时间拉满，表示没有收到新的消息
         }
-
         if (usart2RXTime == 10) {
             // 接收完了一串串口消息
             if (USART2_RX_BUF[0] == 0xC1 && USART2_RX_BUF[1] == 0xC2 && USART2_RX_BUF[2] == 0xC3 && USART2_RX_BUF[3] == 0xC4) {
