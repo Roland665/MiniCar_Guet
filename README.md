@@ -328,6 +328,8 @@ PB7：IIC1_SDA
 | C1 C2 C3 C4 08        | 减速                                                   |
 | **C1 C2 C3 C4 09 xx** | 当前检测到的硬币数为xx                                 |
 | C1 C2 C3 C4 0A        | 进内道                                                 |
+| C1 C2 C3 C4 0B xx yy  | lv = xx , rv = yy                                      |
+| C1 C2 C3 C4 0C xx yy  | 同步时间，xx：秒，yy：毫秒*10(yy==0x01 即10毫秒)       |
 | **C1 C2 C3 C4 FF**    | 应答                                                   |
 
 

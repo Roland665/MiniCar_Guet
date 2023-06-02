@@ -41,7 +41,7 @@
 #define WIRELESSCOMMAND_ITEM_SIZE    sizeof(u8)
 
 /*最多可以存储 2 个 u8类型变量的队列 */
-#define CUSTOMDATA_QUEUE_LENGTH 2
+#define CUSTOMDATA_QUEUE_LENGTH 3
 #define CUSTOMDATA_ITEM_SIZE    sizeof(u8)
 /**************************** 任务句柄 ********************************/
 /* AppTaskCreate 任务句柄 */
@@ -172,19 +172,22 @@ u8 trackingFlag = 0; // Six bit of one byte was used to means the state of car i
 
 u8 nodeCounter    = 0; // When car meet the black node in the line, this counter++
 u16 nodeCounterCD = 0; // the nodeCounter CD
-int v1[2]         = {0x12, 0x38};
-int v2[2]         = {0x11, 0x40};
-int v3[2]         = {0x09, 0x50};
-int v4[3]         = {0x05, 0x64};
-int pwmerr        = 4;
-int lV            = 13; // 沿线行驶时左轮推荐速度
-int rV            = 40; // 沿线行驶时右轮推荐速度
+int v1[2]         = {0x04, 0x3E};
+int v2[2]         = {0x03, 0x45};
+int v3[2]         = {0x02, 0x50};
+int v4[3]         = {0x02, 0x50};
+int pwmerr        = 3;
+int lV            = 0x0D; // 沿线行驶时左轮推荐速度
+int rV            = 0x2e; // 沿线行驶时右轮推荐速度
 
 u8 runRoad = 1;// this variable set 1 means car will along the out line, set 2 this car will along the in line
-u16 CHANGEROADTIME_MAX = 0x4a*10;
+u16 CHANGEROADTIME_MAX = 0x40*10;
 u16 changeRoadTime = 0xffff;//This variable means the car begin change time to end change time  
 
 u8 AckFlag = 0;//This flag will be set 1 when the car recive another device`s answer back
+
+uint64_t runTime = 0;//Count the time from the car start run to stop run 
+u8 runTimeEF = 0;//runTime enable flag , set 1 enable runTime to count
 /*
 *************************************************************************
 *                             函数声明
@@ -473,6 +476,7 @@ static void MetalDetection_Task(void *parameter)
     UBaseType_t xReturn = pdPASS;
     u8 beSendData[2] = {0x09,0x00};
 	u8 i = 0;
+    u8 zero = 0;
     while (1) {
         if (nodeCounter == 0 && 1 == GPIO_ReadInputDataBit(METAL_DET_GPIO, METAL_DET_Pin)) {
             MTLEN(TIM3, 0);
@@ -487,6 +491,9 @@ static void MetalDetection_Task(void *parameter)
 				if(xReturn != pdPASS)
 					printf("硬币数量消息发送失败\r\n");
 			}
+            xReturn = xQueueSend(customDataHandle, &zero, 1000/portTICK_PERIOD_MS);
+            if(xReturn != pdPASS)
+                printf("补零消息发送失败\r\n");
             metalDiscoveryFlag = 1;
             // 响两秒蜂鸣器
             BEEP = 1;
@@ -505,11 +512,12 @@ static void MetalDetection_Task(void *parameter)
             vTaskDelay(100);
             BEEP               = 0;
             metalDiscoveryFlag = 0;
-            pwmerr             = 2;
             // 解挂任务
+            pwmerr = 1;
             vTaskResume(Run_Task_Handle);
             while (1 == GPIO_ReadInputDataBit(METAL_DET_GPIO, METAL_DET_Pin))
                 ;
+            pwmerr = 1;
             vTaskDelay(300);
             pwmerr = 3;
         }
@@ -532,15 +540,17 @@ static void OLEDShowing_Task(void *parameter)
     u8g2_InitDisplay(&u8g2);     // send init sequence to the display, display is in sleep mode after this
     u8g2_SetPowerSave(&u8g2, 0); // place 1 means open power-saveing, you`ll see nothing in the screem
     int v = 0;
+	int secondTime;
+	int milliSecondTime;
     while (1) {
         u8g2_ClearBuffer(&u8g2); // clear the u8g2 buffer
         if (metalDiscoveryFlag == 0) {
-            vTaskDelay(10);
             v = (lVelocity + rVelocity) / 2;
             u8g2_ClearBuffer(&u8g2);                         // wake up display
             u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t); // 图标大全
             u8g2_DrawGlyph(&u8g2, 82, 20, 0x0047);           // 硬币数量显示图标
             u8g2_DrawGlyph(&u8g2, 0, 63, 0x029E);            // 小电驴图标
+            u8g2_DrawGlyph(&u8g2, 0, 21, 0x0158);            // 秒表图标
 
             u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf); // 9像素点高字符库
             u8g2_DrawStr(&u8g2, 21, 59, ":");        // 小电驴后冒号，表示速度
@@ -549,6 +559,10 @@ static void OLEDShowing_Task(void *parameter)
             u8g2_DrawStr(&u8g2, 32, 59, str); // 小车实际速度
             sprintf(str, "%d", coinCounter);
             u8g2_DrawStr(&u8g2, 114, 15, str); // 硬币实际数量
+			secondTime = runTime/1000;
+			milliSecondTime = (runTime % 1000) /10;
+            sprintf(str, "%d:%d", secondTime, milliSecondTime);
+            u8g2_DrawStr(&u8g2, 24, 17, str); // 小车跑的时间
         } else {
             u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t); // 图标大全
             u8g2_DrawGlyph(&u8g2, 82, 20, 0x0047);           // 硬币数量显示图标
@@ -563,7 +577,7 @@ static void OLEDShowing_Task(void *parameter)
         }
         if (nodeCounter == 3) {
             u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf); // 9像素点高字符库
-            u8g2_DrawStr(&u8g2, 100, 59, "speed up!");
+            u8g2_DrawStr(&u8g2, 100, 59, "up!");
         }
         u8g2_SendBuffer(&u8g2); // 同步屏幕
     }
@@ -592,8 +606,8 @@ static void Run_Task(void *parameter)
             trackingFlag >>= 1;
 			
 			if (runRoad == 2 && changeRoadTime < CHANGEROADTIME_MAX){
-				lTargetV = v3[0]+6;
-				rTargetV = v3[1]+4;
+				lTargetV = 0x02+10;
+				rTargetV = 0x50+5;
 			}
 			else {
 				// along the line
@@ -636,11 +650,10 @@ static void Run_Task(void *parameter)
 							nodeCounter = 2;
 						else if(nodeCounter == 4)
 							nodeCounter = 5;
-						
 					}
 					// 处于不正常状态，speed down
 					lTargetV = lV-7;
-					rTargetV = rV-8;
+					rTargetV = rV-15;
 				}
             }
         }
@@ -673,7 +686,7 @@ static void Run_Task(void *parameter)
         }
         // right
         if (rTargetV != 0) {
-            if (rReplaceV < rVelocity - ignoreErr && PWMVal[1] > 10) {
+            if (rReplaceV < rVelocity - ignoreErr && PWMVal[1] > 14) {
                 PWMVal[1] -= pwmerr;
                 MTREN(TIM3, PWMVal[1]);
             } else if (rReplaceV > rVelocity + ignoreErr && PWMVal[1] < 100) {
@@ -691,7 +704,8 @@ static void Run_Task(void *parameter)
 				}
 			}
 			printf("左轮速度为:0.%dm/s  右轮速度为:0.%dm/s  左轮待替换速度为:0.%dm/s  右轮待替换速度为:0.%dm/s\r\n", lVelocity, rVelocity, lReplaceV, rReplaceV);
-        } else {
+        } 
+        else {
             PWMVal[1] = 0;
             MTREN(TIM3, PWMVal[1]);
         }
@@ -706,6 +720,8 @@ static void AnalyseCommand_Task(void *parameter)
     BaseType_t xReturn = pdPASS;
     u8 commands[WIRELESSCOMMAND_QUEUE_LENGTH];
     u8 i;
+    u8 ack[3] = {0xFF,0x00,0x00};//私协应答数据
+    u8 customDataOfTime[3] = {0x0C, 0, 0};//私协时间同步数据
     while (1) {
         for (i = 0; i < WIRELESSCOMMAND_QUEUE_LENGTH; i++) {
             xReturn = xQueueReceive(wirelessCommandHandle, &commands[i], portMAX_DELAY);
@@ -713,8 +729,22 @@ static void AnalyseCommand_Task(void *parameter)
         if (xReturn != pdPASS)
             printf("命令消息接收失败\r\n");
         printf("成功接收控制命令：%d\r\n", commands[0]);
+        
+        USART_SendData(USART2, 0xC1);         //向串口1发送数据
+        while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+        USART_SendData(USART2, 0xC2);         //向串口1发送数据
+        while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+        USART_SendData(USART2, 0xC3);         //向串口1发送数据
+        while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+        USART_SendData(USART2, 0xC4);         //向串口1发送数据
+        while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+        for(i = 0; i < CUSTOMDATA_QUEUE_LENGTH; i++){
+            USART_SendData(USART2, ack[i]);         //向串口1发送数据
+            while(USART_GetFlagStatus(USART2,USART_FLAG_TC)!=SET);//等待发送结束
+        }
 
         if (commands[0] == 0x00) {
+            runTimeEF = 0;//停止计时
             carMode  = 0; // 手动挡
             lTargetV = 0;
             rTargetV = 0;
@@ -722,19 +752,25 @@ static void AnalyseCommand_Task(void *parameter)
             MTLEN(TIM3, 0);
             MTREN(TIM3, 0);
             printf("停车~\r\n");
+            customDataOfTime[1] = runTime / 1000;
+            customDataOfTime[2] = runTime % 1000 / 10;
+            for(i = 0; i < CUSTOMDATA_QUEUE_LENGTH; i++){
+                xReturn = xQueueSend(customDataHandle,&customDataOfTime[i],1000/portTICK_PERIOD_MS);
+            }
         } else if (commands[0] == 0x01) {
             carMode  = 0; // 手动挡
             lTargetV = commands[1];
             rTargetV = commands[2];
             printf("调速成功~左右车轮目标车速为：0.%dm/s  0.%dm/s\r\n", lTargetV, rTargetV);
         } else if (commands[0] == 0x02) {
+            runTimeEF = 1;//开始计时
             carMode = 1;
             printf("开车！自巡航模式\r\n");
-			pwmerr = 1;
-			vTaskDelay(300);
-			pwmerr = 2;
-			vTaskDelay(600);
-			pwmerr = 3;
+            pwmerr = 1;
+            vTaskDelay(600);
+            pwmerr = 2;
+            vTaskDelay(300);
+            pwmerr = 3;
         } else if (commands[0] == 0x03) {
             v1[0] = commands[1];
             v1[1] = commands[2];
@@ -809,16 +845,24 @@ static void AnalyseCommand_Task(void *parameter)
             vTaskDelay(100);
             BEEP = 0;
         }
-		else if (commands[0] == 0x0A){
-			runRoad = 2;
-			changeRoadTime = 0;
-			v2[0] -= 1;
-			v2[1] += 3;
-			v3[0] -= 2;
-			v3[1] += 4;
-		}
-        else if(commands[0] == 0xFF){
-            AckFlag = 1;//收到应答
+        else if (commands[0] == 0x0A){
+            runRoad = 2;
+            changeRoadTime = 0;
+            v2[0] -= 1;
+            v2[1] += 3;
+            v3[0] -= 2;
+            v3[1] += 4;
+        }
+        else if (commands[0] == 0x0B){
+            lV = commands[1];
+            rV = commands[2];
+            BEEP = 1;
+            vTaskDelay(100);
+            BEEP = 0;
+            vTaskDelay(300);
+            BEEP = 1;
+            vTaskDelay(100);
+            BEEP = 0;
         }
     }
 }
@@ -903,7 +947,7 @@ static void ListeningSensors_Task(void *parameter)
  */
 static void LED_Task(void *parameter)
 {
-    while (1) {
+    while (1) {       
         TestLED = 0;
         vTaskDelay(500 / portTICK_PERIOD_MS); /*延时500ms*/
         TestLED = 1;
@@ -1000,6 +1044,7 @@ void TIM2_IRQHandler(void)
 {
     BaseType_t xReturn = pdPASS;
     u8 i;
+    u8 temp;
     if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET) { // 溢出中断
         if (lTime < 300)
             lTime++;
@@ -1020,47 +1065,53 @@ void TIM2_IRQHandler(void)
         if (nodeCounterCD < 1000)
             nodeCounterCD++;
 
-		if(changeRoadTime < CHANGEROADTIME_MAX)
+		if(changeRoadTime < CHANGEROADTIME_MAX){
 			changeRoadTime++;
+        }
+        
+        if(runTimeEF == 1)
+            runTime++;
 
         if (nodeCounter == 1) {
             // speed up
-            lV += 5;
-            rV += 7;
-            v1[0] += 5;
-            v1[1] += 9;
-            v2[0] += 5;
-            v2[1] += 11;
-            v3[0] += 4;
-            v3[1] += 8;
+            lV     += 8;
+            rV     += 17;
+            v1[0]  += 6;
+            v1[1]  += 17;
+            v2[0]  += 7;
+            v2[1]  += 20;
+            v3[0]  += 13;
+            v3[1]  += 23;
             pwmerr += 4;
 			nodeCounter = 3;
 			nodeCounterCD = 0;
         } else if (nodeCounter == 2){
             // speed down
-            lV -= 5;
-            rV -= 7;
-            v1[0] -= 5;
-            v1[1] -= 9;
-            v2[0] -= 5;
-            v2[1] -= 11;
-            v3[0] -= 4;
-            v3[1] -= 8;
+            lV     -= 8;
+            rV     -= 17;
+            v1[0]  -= 6;
+            v1[1]  -= 17;
+            v2[0]  -= 7;
+            v2[1]  -= 20;
+            v3[0]  -= 13;
+            v3[1]  -= 23;
             pwmerr -= 4;
 			nodeCounter = 4;
 			nodeCounterCD = 0;
         }
 		else if(nodeCounter == 5){
-			// BEEP = ;
 			runRoad = 2;
 			changeRoadTime = 0;
-			v2[0] -= 1;
-			v2[1] += 3;
-			v3[0] -= 2;
-			v3[1] += 4;
+			v1[0] -= 1;
+			v1[1] += 3;
+            v2[0] -= 1;
+			v2[1] += 2;
+			// v3[0] -= 2;
+			// v3[1] += 4;
 			nodeCounter = 6;
 			nodeCounterCD = 0;	
 		}
+        // else if(nodeCounter == 6)
         if (usart1RXTime == 10) {
             // 接收完了一串串口消息
             if (USART1_RX_BUF[0] == 0xC1 && USART1_RX_BUF[1] == 0xC2 && USART1_RX_BUF[2] == 0xC3 && USART1_RX_BUF[3] == 0xC4) {
@@ -1076,8 +1127,13 @@ void TIM2_IRQHandler(void)
         if (usart2RXTime == 10) {
             // 接收完了一串串口消息
             if (USART2_RX_BUF[0] == 0xC1 && USART2_RX_BUF[1] == 0xC2 && USART2_RX_BUF[2] == 0xC3 && USART2_RX_BUF[3] == 0xC4) {
-                for (i = 0; i < WIRELESSCOMMAND_QUEUE_LENGTH; i++) {
-                    xReturn = xQueueSendFromISR(wirelessCommandHandle, &USART2_RX_BUF[4 + i], NULL);
+                
+                if(USART2_RX_BUF[4] == 0xFF)
+                    AckFlag = 1;
+                else {
+                    for (i = 0; i < WIRELESSCOMMAND_QUEUE_LENGTH; i++) {
+                        xReturn = xQueueSendFromISR(wirelessCommandHandle, &USART2_RX_BUF[4 + i], NULL);
+                    }
                 }
                 if (xReturn != pdTRUE)
                     printf("控制命令消息发送失败");
