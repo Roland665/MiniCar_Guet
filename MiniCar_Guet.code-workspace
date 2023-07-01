@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+    ],
+    "settings": {
+        "files.associations": {
+            "iterator": "c",
+            "filters.h": "c"
+        }
+    }
+}

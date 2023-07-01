@@ -6,6 +6,7 @@
 #include "HC_SR04/hc_sr04.h"
 #include "CAP/myCap.h"
 #include "Timer/myTimer.h"
+#include "Filter/Filters.h"
 
 /**************************** 任务定义区 ********************************/
 //AppCreate 任务栈深
@@ -44,6 +45,9 @@ TaskHandle_t Ranging_Task_Handle;
 //Ranging 任务函数
 void Ranging_Task(void *pvParameters);
 
+/**************************** 全局变量定义区 ********************************/
+float distance = 0;//小车与前方物体间距离(单位cm)
+u16 T2CCP0_STA = 0; //输入捕获状态 bit15表示是否完成一次脉冲捕获，bit14表示是否完成脉冲第一次变化沿，bit13~bit0表示脉冲持续时间(T2CCP0_STA++语句触发周期)
 
 void setup(void) //串口0初始化
 {
@@ -52,7 +56,7 @@ void setup(void) //串口0初始化
 	Usart0_Init(115200);
 	HC_SR04_Init();
 	HC_SR04_Start();
-    Time0A_Init(80-1);//系统频率为80Mhz，80000000/80=1us,实现us级中断
+	Time0A_Init(80-1);//系统频率为80Mhz，80000000/80=1us,实现us级中断
 }
 
 int main(void)
@@ -90,16 +94,41 @@ void AppCreate_Task(void *pvParameters)
                (void *)			NULL,					// 传递给任务函数的参数
                (UBaseType_t)	3,						// 任务优先级
                (TaskHandle_t *)	&LED2_Task_Handle);		// 任务句柄
+               
+   //创建 Ranging_Task 任务
+   xTaskCreate((TaskFunction_t)	Ranging_Task,				// 任务函数
+               (const char *)	"Ranging_Task",				// 任务名称
+               (uint16_t)		Ranging_Task_Stack_Deep,	// 任务堆栈大小
+               (void *)			NULL,					// 传递给任务函数的参数
+               (UBaseType_t)	3,						// 任务优先级
+               (TaskHandle_t *)	&Ranging_Task_Handle);		// 任务句柄
 
    vTaskDelete(AppCreate_Task_Handle); //删除开始任务 (2)
    taskEXIT_CRITICAL();            //退出临界区
 }
 
+/**
+  * @brief    Ranging_Task 任务函数
+  * @brief    通过计算 T2CCP0 捕获的脉冲长度得到小车与前方物体间距离
+  */
+void Ranging_Task(void *pvParameters){
+    u16 ultrasonicTimes = 0;
+    while(1){
+        if(T2CCP0_STA&0x8000){
+            //完成一次上升沿脉冲捕获
+			ultrasonicTimes = T2CCP0_STA&0x3FFF;
+			T2CCP0_STA = 0;
+			distance = Filter(ultrasonicTimes*0.00017, distance, 0.8);
+			printf("Time=%huus, distance=%.1fcm\r\n",ultrasonicTimes,distance);
+        }
+    }
+}
 
-
-
-void LED_Task(void *pvParameters)
-{
+/**
+  * @brief    LED_Task 任务函数
+  * @brief    闪烁灯，体现程序正常跑了
+  */
+void LED_Task(void *pvParameters){
    while (1)
    {
        LED0_RGB_R_ENABLE;
@@ -114,9 +143,12 @@ void LED_Task(void *pvParameters)
    }
 }
 
+/**
+  * @brief    LED2_Task 任务函数
+  * @brief    闪烁灯，体现程序正常跑了
+  */
 
-void LED2_Task(void *pvParameters)
-{
+void LED2_Task(void *pvParameters){
    while (1)
    {
        LED0_RGB_R_ENABLE;
@@ -133,7 +165,6 @@ void LED2_Task(void *pvParameters)
 
 
 
-u16 T2CCP0_STA = 0; //输入捕获状态 bit15表示是否完成一次脉冲捕获，bit14表示是否完成脉冲第一次变化沿，bit13~bit0表示脉冲持续时间(T2CCP0_STA++语句触发周期)
 //T2CCP0的中断服务函数
 void TIMER2A_Handler(void){
 	TimerIntClear(TIMER2_BASE, TIMER_CAPA_MATCH);

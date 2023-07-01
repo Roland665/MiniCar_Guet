@@ -417,6 +417,13 @@
         </Group>
         <Group>
           <GroupName>Softwares</GroupName>
+          <Files>
+            <File>
+              <FileName>Filters.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Softwares\Filter\Filters.c</FilePath>
+            </File>
+          </Files>
         </Group>
         <Group>
           <GroupName>Main</GroupName>

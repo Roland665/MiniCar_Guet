@@ -13,10 +13,10 @@
         "name": "Core",
         "files": [
           {
-            "path": "Core/startup_TM4C123.s"
+            "path": "Core/system_TM4C123.c"
           },
           {
-            "path": "Core/system_TM4C123.c"
+            "path": "Core/startup_TM4C123.s"
           }
         ],
         "folders": []
@@ -209,8 +209,8 @@
     ]
   },
   "outDir": "build",
-  "deviceName": null,
-  "packDir": null,
+  "deviceName": "TM4C123GH6PM",
+  "packDir": ".pack/Keil/TM4C_DFP.1.1.0",
   "miscInfo": {
     "uid": "85ecda0c7b0cb3923b769bf9048f74a7"
   },
@@ -354,15 +354,15 @@
           "FreeRTOS/CMSIS/Include",
           "FreeRTOS/CMSIS/Source/portable/ARM_CM4F",
           "Tivaware",
-          "RTE/_Template",
-          ".eide/deps"
+          "RTE/_Template"
         ],
         "libList": [],
         "sourceDirList": [],
         "defineList": [
           "rvmdk",
           "PART_TM4C123GH6PM",
-          "TARGET_IS_TM4C123_RB1"
+          "TARGET_IS_TM4C123_RB1",
+          "TM4C123GH6PM"
         ]
       }
     }
