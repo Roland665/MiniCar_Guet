@@ -1,0 +1,371 @@
+{
+  "name": "Object",
+  "type": "ARM",
+  "dependenceList": [],
+  "srcDirs": [
+    ".eide/deps"
+  ],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [],
+    "folders": [
+      {
+        "name": "Core",
+        "files": [
+          {
+            "path": "Core/startup_TM4C123.s"
+          },
+          {
+            "path": "Core/system_TM4C123.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "FreeRTOS",
+        "files": [
+          {
+            "path": "FreeRTOS/CMSIS/Source/clib_arm.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/cmsis_os2.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/event_groups.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/freertos_evr.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/list.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/os_systick.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/queue.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/tasks.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/timers.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/portable/ARM_CM4F/port.c"
+          },
+          {
+            "path": "FreeRTOS/CMSIS/Source/portable/MemMang/heap_4.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Hardwares",
+        "files": [
+          {
+            "path": "Hardwares/usart/usart.c"
+          },
+          {
+            "path": "Hardwares/LED/led.c"
+          },
+          {
+            "path": "Hardwares/HC_SR04/hc_sr04.c"
+          },
+          {
+            "path": "Hardwares/PWM/myPWM.c"
+          },
+          {
+            "path": "Hardwares/CAP/myCap.c"
+          },
+          {
+            "path": "Hardwares/Timer/myTimer.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Main",
+        "files": [
+          {
+            "path": "Main/main.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Softwares",
+        "files": [],
+        "folders": []
+      },
+      {
+        "name": "TivaWares",
+        "files": [
+          {
+            "path": "Tivaware/driverlib/adc.c"
+          },
+          {
+            "path": "Tivaware/driverlib/aes.c"
+          },
+          {
+            "path": "Tivaware/driverlib/can.c"
+          },
+          {
+            "path": "Tivaware/driverlib/comp.c"
+          },
+          {
+            "path": "Tivaware/driverlib/cpu.c"
+          },
+          {
+            "path": "Tivaware/driverlib/crc.c"
+          },
+          {
+            "path": "Tivaware/driverlib/des.c"
+          },
+          {
+            "path": "Tivaware/driverlib/eeprom.c"
+          },
+          {
+            "path": "Tivaware/driverlib/emac.c"
+          },
+          {
+            "path": "Tivaware/driverlib/epi.c"
+          },
+          {
+            "path": "Tivaware/driverlib/flash.c"
+          },
+          {
+            "path": "Tivaware/driverlib/fpu.c"
+          },
+          {
+            "path": "Tivaware/driverlib/gpio.c"
+          },
+          {
+            "path": "Tivaware/driverlib/hibernate.c"
+          },
+          {
+            "path": "Tivaware/driverlib/i2c.c"
+          },
+          {
+            "path": "Tivaware/driverlib/interrupt.c"
+          },
+          {
+            "path": "Tivaware/driverlib/lcd.c"
+          },
+          {
+            "path": "Tivaware/driverlib/mpu.c"
+          },
+          {
+            "path": "Tivaware/driverlib/onewire.c"
+          },
+          {
+            "path": "Tivaware/driverlib/pwm.c"
+          },
+          {
+            "path": "Tivaware/driverlib/qei.c"
+          },
+          {
+            "path": "Tivaware/driverlib/shamd5.c"
+          },
+          {
+            "path": "Tivaware/driverlib/ssi.c"
+          },
+          {
+            "path": "Tivaware/driverlib/sw_crc.c"
+          },
+          {
+            "path": "Tivaware/driverlib/sysctl.c"
+          },
+          {
+            "path": "Tivaware/driverlib/sysexc.c"
+          },
+          {
+            "path": "Tivaware/driverlib/systick.c"
+          },
+          {
+            "path": "Tivaware/driverlib/timer.c"
+          },
+          {
+            "path": "Tivaware/driverlib/uart.c"
+          },
+          {
+            "path": "Tivaware/driverlib/udma.c"
+          },
+          {
+            "path": "Tivaware/driverlib/usb.c"
+          },
+          {
+            "path": "Tivaware/driverlib/watchdog.c"
+          },
+          {
+            "path": "Tivaware/utils/uartstdio.c"
+          },
+          {
+            "path": "Tivaware/utils/ustdlib.c"
+          }
+        ],
+        "folders": []
+      }
+    ]
+  },
+  "outDir": "build",
+  "deviceName": null,
+  "packDir": null,
+  "miscInfo": {
+    "uid": "85ecda0c7b0cb3923b769bf9048f74a7"
+  },
+  "targets": {
+    "Template": {
+      "excludeList": [],
+      "toolchain": "AC5",
+      "compileConfig": {
+        "cpuType": "Cortex-M4",
+        "floatingPointHardware": "single",
+        "scatterFilePath": "Object.sct",
+        "useCustomScatterFile": true,
+        "storageLayout": {
+          "RAM": [
+            {
+              "tag": "RAM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "RAM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "RAM",
+              "id": 3,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            },
+            {
+              "tag": "IRAM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x20000000",
+                "size": "0x8000"
+              },
+              "isChecked": true,
+              "noInit": false
+            },
+            {
+              "tag": "IRAM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "noInit": false
+            }
+          ],
+          "ROM": [
+            {
+              "tag": "ROM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "ROM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "ROM",
+              "id": 3,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            },
+            {
+              "tag": "IROM",
+              "id": 1,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x40000"
+              },
+              "isChecked": true,
+              "isStartup": true
+            },
+            {
+              "tag": "IROM",
+              "id": 2,
+              "mem": {
+                "startAddr": "0x0",
+                "size": "0x0"
+              },
+              "isChecked": false,
+              "isStartup": false
+            }
+          ]
+        },
+        "options": "null"
+      },
+      "uploader": "JLink",
+      "uploadConfig": {
+        "bin": "",
+        "baseAddr": "",
+        "cpuInfo": {
+          "vendor": "null",
+          "cpuName": "null"
+        },
+        "proType": 1,
+        "speed": 8000,
+        "otherCmds": ""
+      },
+      "uploadConfigMap": {},
+      "custom_dep": {
+        "name": "default",
+        "incList": [
+          "Hardwares",
+          "Softwares",
+          "Main",
+          "Core",
+          "FreeRTOS/CMSIS/Include",
+          "FreeRTOS/CMSIS/Source/portable/ARM_CM4F",
+          "Tivaware",
+          "RTE/_Template",
+          ".eide/deps"
+        ],
+        "libList": [],
+        "sourceDirList": [],
+        "defineList": [
+          "rvmdk",
+          "PART_TM4C123GH6PM",
+          "TARGET_IS_TM4C123_RB1"
+        ]
+      }
+    }
+  },
+  "version": "3.3"
+}

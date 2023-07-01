@@ -1,0 +1,23 @@
+The 'RTX_Blinky' project is a simple CMSIS RTOS Kernel based example for
+TI 'TM4C1294NCPDT' microcontroller using TI 'EK-TM4C1294XL' Evaluation Board.
+Compliant to Cortex Microcontroller Software Interface Standard (CMSIS v2.0).
+
+Example functionality:
+ - Clock Settings:
+   - XTAL             = 25.00 MHz
+   - SYS =  PIOSC     = 16.00 MHz
+
+The simple RTX Kernel based example simulates the step-motor
+driver. LEDs are blinking simulating the activity of the clock task.
+
+This example simulates Half step driver mode and
+CW rotation direction.
+
+
+The Blinky program is available in different targets:
+
+  TM4C129 RAM:           configured for on-chip RAM
+                         (used for debugging)
+
+  TM4C129 Flash:         configured for on-chip Flash
+                         (used for production or target debugging)

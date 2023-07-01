@@ -1,0 +1,25 @@
+{
+    "version": 4,
+    "beforeBuildTasks": [],
+    "afterBuildTasks": [],
+    "global": {
+        "use-microLIB": true,
+        "output-debug-info": "enable"
+    },
+    "c/cpp-compiler": {
+        "optimization": "level-0",
+        "one-elf-section-per-function": true,
+        "c99-mode": true,
+        "C_FLAGS": "--c99",
+        "CXX_FLAGS": "--c99",
+        "warnings": "all-warnings"
+    },
+    "asm-compiler": {},
+    "linker": {
+        "output-format": "elf",
+        "xo-base": "",
+        "ro-base": "0x00000000",
+        "rw-base": "0x20000000",
+        "misc-controls": "--entry Reset_Handler"
+    }
+}

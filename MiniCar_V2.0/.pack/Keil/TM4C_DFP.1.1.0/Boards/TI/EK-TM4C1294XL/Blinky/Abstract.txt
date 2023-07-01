@@ -1,0 +1,23 @@
+The 'Blinky' project is a simple demo program for
+TI 'TM4C1294NCPDT' microcontroller using TI 'EK-TM4C1294XL' Evaluation Board.
+Compliant to Cortex Microcontroller Software Interface Standard (CMSIS v2.0).
+
+Example functionality:
+ - Clock Settings:
+   - XTAL             = 25.00 MHz
+   - SYS =  PIOSC     = 16.00 MHz
+
+ - 4 LEDs blink with a fixed speed, determined by SysTick Timer
+     working in interrupt mode
+ - if any Button (USR_SW1, USR_SW2) is pressed all LEDs are lit.
+ - "Hello World" is output onto serial port UART0
+   UART0 settings: 115200 baud, 8 data bits, no parity, 1 stop bit
+
+
+The Blinky program is available in different targets:
+
+  TM4C129 RAM:           configured for on-chip RAM
+                         (used for debugging)
+
+  TM4C129 Flash:         configured for on-chip Flash
+                         (used for production or target debugging)
