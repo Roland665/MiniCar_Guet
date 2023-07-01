@@ -14,6 +14,7 @@
 #include "metal_detection.h"
 #include "beep.h"
 #include "track.h"
+#include "exti.h"
 /*******************************************/
 /*
 @version v1.1
@@ -172,16 +173,15 @@ u8 trackingFlag = 0; // Six bit of one byte was used to means the state of car i
 
 u8 nodeCounter    = 0; // When car meet the black node in the line, this counter++
 u16 nodeCounterCD = 0; // the nodeCounter CD
-int v1[2]         = {0x04, 0x3E};
-int v2[2]         = {0x03, 0x45};
+int v1[2]         = {0x04, 0x3c};
+int v2[2]         = {0x03, 0x43};
 int v3[2]         = {0x02, 0x50};
-int v4[3]         = {0x02, 0x50};
 int pwmerr        = 3;
-int lV            = 0x0D; // 沿线行驶时左轮推荐速度
+int lV            = 0x06; // 沿线行驶时左轮推荐速度
 int rV            = 0x2e; // 沿线行驶时右轮推荐速度
 
 u8 runRoad = 1;// this variable set 1 means car will along the out line, set 2 this car will along the in line
-u16 CHANGEROADTIME_MAX = 0x40*10;
+u16 CHANGEROADTIME_MAX = 0x3c*10;
 u16 changeRoadTime = 0xffff;//This variable means the car begin change time to end change time  
 
 u8 AckFlag = 0;//This flag will be set 1 when the car recive another device`s answer back
@@ -191,6 +191,8 @@ u8 runTimeEF = 0;//runTime enable flag , set 1 enable runTime to count
 
 uint16_t speedUpTime = 2000;//2s to speed up
 u8 speedUpTimeEF = 0;
+
+u8 keyCD = 0;//the exti3 key 
 /*
 *************************************************************************
 *                             函数声明
@@ -256,6 +258,7 @@ static void Setup(void)
     vSensors_Init();
     Metal_Detection_Init();
     track_Init();
+	EXTI3_Init();
 }
 
 static void AppTaskCreate(void)
@@ -477,9 +480,8 @@ static void SendCustomData_Task(void *parameter){
 static void MetalDetection_Task(void *parameter)
 {
     UBaseType_t xReturn = pdPASS;
-    u8 beSendData[2] = {0x09,0x00};
+    u8 beSendData[3] = {0x09,0x00,0x00};
 	u8 i = 0;
-    u8 zero = 0;
     while (1) {
         if (nodeCounter == 0 && 1 == GPIO_ReadInputDataBit(METAL_DET_GPIO, METAL_DET_Pin)) {
             MTLEN(TIM3, 0);
@@ -494,9 +496,6 @@ static void MetalDetection_Task(void *parameter)
 				if(xReturn != pdPASS)
 					printf("硬币数量消息发送失败\r\n");
 			}
-            xReturn = xQueueSend(customDataHandle, &zero, 1000/portTICK_PERIOD_MS);
-            if(xReturn != pdPASS)
-                printf("补零消息发送失败\r\n");
             metalDiscoveryFlag = 1;
             // 响两秒蜂鸣器
             BEEP = 1;
@@ -610,7 +609,7 @@ static void Run_Task(void *parameter)
 			
 			if (runRoad == 2 && changeRoadTime < CHANGEROADTIME_MAX){
 				lTargetV = 0x02+10;
-				rTargetV = 0x50+5;
+				rTargetV = 0x49+5;
 			}
 			else {
 				// along the line
@@ -757,6 +756,7 @@ static void AnalyseCommand_Task(void *parameter)
             printf("停车~\r\n");
             customDataOfTime[1] = runTime / 1000;
             customDataOfTime[2] = runTime % 1000 / 10;
+			vTaskDelay(100);
             for(i = 0; i < CUSTOMDATA_QUEUE_LENGTH; i++){
                 xReturn = xQueueSend(customDataHandle,&customDataOfTime[i],1000/portTICK_PERIOD_MS);
             }
@@ -955,6 +955,18 @@ static void LED_Task(void *parameter)
         vTaskDelay(500 / portTICK_PERIOD_MS); /*延时500ms*/
         TestLED = 1;
         vTaskDelay(500 / portTICK_PERIOD_MS); /*延时500ms*/
+		if(runRoad == 2){
+			TestLED = 0;
+			BEEP = 1;
+			vTaskDelay(200);
+			BEEP = 0;
+			vTaskDelay(500);
+			BEEP = 1;
+			vTaskDelay(200);
+			BEEP = 0;
+			vTaskDelay(500);
+			runRoad = 0;
+		}
     }
 }
 
@@ -1049,6 +1061,9 @@ void TIM2_IRQHandler(void)
     u8 i;
     u8 temp;
     if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET) { // 溢出中断
+		if (keyCD < 20)
+			keyCD++;
+		
         if (lTime < 300)
             lTime++;
         else
@@ -1152,5 +1167,20 @@ void TIM2_IRQHandler(void)
             usart2RXTime  = 0xFF; // 把时间拉满，表示没有收到新的消息
         }
         TIM_ClearITPendingBit(TIM2, TIM_IT_Update); // 清除中断标志位
+    }
+}
+
+
+//外部中断3服务函数
+void EXTI3_IRQHandler(void){
+    if(EXTI_GetITStatus(EXTI_Line3)!=RESET){//判断某个线上的中断是否发生
+		if(keyCD >= 20){
+            runTimeEF = 1;//开始计时
+            carMode = 1;
+            printf("开车！自巡航模式\r\n");
+            pwmerr = 3;
+			keyCD = 0;
+		}
+    EXTI_ClearITPendingBit(EXTI_Line3); //清除 LINE 上的中断标志位
     }
 }

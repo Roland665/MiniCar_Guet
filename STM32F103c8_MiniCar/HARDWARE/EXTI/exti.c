@@ -99,25 +99,25 @@ void EXTI3_Init(void)
 	EXTI_InitTypeDef   EXTI_InitStructure;
 	NVIC_InitTypeDef   NVIC_InitStructure;
 	
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA,ENABLE);//使能 GPIOA 时钟
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB,ENABLE);//使能 GPIO 时钟
 	
     //GPIOA0初始化设置 
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;//外部中断输入
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPD; //设置成输入，默认下拉
-    GPIO_Init(GPIOA, &GPIO_InitStructure);//初始化 GPIO
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU; //设置成输入，上拉
+    GPIO_Init(GPIOB, &GPIO_InitStructure);//初始化 GPIO
 	
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO,ENABLE); //开启 AFIO 时钟
 
-	/* 配置EXTI_Line0 */
-	GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource3);//PA3 连接到中断线3
-	EXTI_InitStructure.EXTI_Line = EXTI_Line3;//LINE0
+	/* 配置EXTI_Line3 */
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource3);//连接到中断线3
+	EXTI_InitStructure.EXTI_Line = EXTI_Line3;//LINE3
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;//中断事件
-	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;//上升沿触发
-	EXTI_InitStructure.EXTI_LineCmd = ENABLE;//使能LINE0
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;//下降沿触发
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;//使能LINE3
 	EXTI_Init(&EXTI_InitStructure);//配置
 
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI3_IRQn;//外部中断0
-  	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;//抢占优先级2
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI3_IRQn;//外部中断3
+  	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;//抢占优先级1
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;//子优先级2
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;//使能外部中断通道
 	NVIC_Init(&NVIC_InitStructure);//配置

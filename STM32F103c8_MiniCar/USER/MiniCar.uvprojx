@@ -468,6 +468,11 @@
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\Track\track.c</FilePath>
             </File>
+            <File>
+              <FileName>exti.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\EXTI\exti.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -501,7 +506,7 @@
             <File>
               <FileName>startup_stm32f10x_md.s</FileName>
               <FileType>2</FileType>
-              <FilePath>F:\GitRepository\MiniCar_Guet\STM32F103c8_MiniCar\CORE\startup_stm32f10x_md.s</FilePath>
+              <FilePath>..\CORE\startup_stm32f10x_md.s</FilePath>
             </File>
           </Files>
         </Group>
