@@ -3,6 +3,7 @@
 
 /**
   * @brief    PWM模块0通道2初始化
+  * @param    period    :pwm时钟分频系数
   * @param    period    :pwm周期
   * @param	  width     :pwm脉冲宽度
   * @retval   void
@@ -24,7 +25,7 @@ void M0PWM2_Init(u16 period, u16 width){
 	//配置PWM发生器
 	//模块0->发生器1->下计数，不同步
 	PWMGenConfigure(PWM0_BASE,PWM_GEN_1,PWM_GEN_MODE_DOWN|PWM_GEN_MODE_NO_SYNC);	
-	
+    
 	//配置PWM周期
 	/*
 	N = (1 / f) * SysClk。
@@ -39,5 +40,5 @@ void M0PWM2_Init(u16 period, u16 width){
 
 	//使能PWM模块0输出
 	PWMOutputState(PWM0_BASE,PWM_OUT_2_BIT,true);
-	
+
 }

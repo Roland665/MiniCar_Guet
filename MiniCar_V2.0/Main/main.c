@@ -56,7 +56,7 @@ void setup(void) //串口0初始化
 	Usart0_Init(115200);
 	HC_SR04_Init();
 	HC_SR04_Start();
-	Time0A_Init(80-1);//系统频率为80Mhz，80000000/80=1us,实现us级中断
+	Time0A_Init(800-1);//系统频率为80Mhz，800/80000000=10us,实现10us级中断
 }
 
 int main(void)
@@ -118,8 +118,8 @@ void Ranging_Task(void *pvParameters){
             //完成一次上升沿脉冲捕获
 			ultrasonicTimes = T2CCP0_STA&0x3FFF;
 			T2CCP0_STA = 0;
-			distance = Filter(ultrasonicTimes*0.00017, distance, 0.8);
-			printf("Time=%huus, distance=%.1fcm\r\n",ultrasonicTimes,distance);
+			distance = Filter(ultrasonicTimes*0.17, distance, 0.8);
+			printf("Time=%hu, distance=%.1fcm\r\n",ultrasonicTimes,distance);
         }
     }
 }
@@ -164,35 +164,72 @@ void LED2_Task(void *pvParameters){
 }
 
 
-
 //T2CCP0的中断服务函数
 void TIMER2A_Handler(void){
-	TimerIntClear(TIMER2_BASE, TIMER_CAPA_MATCH);
+    //清除中断标志位
+	TimerIntClear( TIMER2_BASE,  TimerIntStatus( TIMER2_BASE,  true));
     if(T2CCP0_STA & 0x4000){
         //捕获过一个上升沿，这次是下降沿来了
         T2CCP0_STA |= 0x8000;//标记完成一次高电平脉冲捕获
         TimerControlEvent(TIMER2_BASE, TIMER_A, TIMER_EVENT_POS_EDGE); //重新设置为上升沿捕获 
-        T2CCP0_STA &= ~0x4000;//置零    
-        printf("完成一次脉冲捕获~计数次数为%d\r\n",T2CCP0_STA & 0x3FFF);
+        T2CCP0_STA &= ~0x4000;//置零
     }
     else{
         //第一次捕获上升沿
         //清空，开始计时等待下降沿
         T2CCP0_STA = 0;
-        T2CCP0_STA |= 0X4000;//标记捕获到了上升沿
+        T2CCP0_STA |= 0x4000;//标记捕获到了上升沿
         TimerControlEvent(TIMER2_BASE, TIMER_A, TIMER_EVENT_NEG_EDGE); //设置为下降沿捕获 
     }
 }
 
+//10us级定时器，实现系统计时
 void TIMER0A_Handler(void){
+    static u16 usecond = 0;
+    static u16 msecond = 0;
+    static u8 TrigFlag = 0;//当TrigFlag为1时，HC_SR04_TRIG输出高电平并将TrigFlag置0，
+                           //当TrigFlag为0时，HC_SR04_TRIG输出低电平并将TrigFlag置2，
+                           //当TrigFlag为2时，等待TrigFlag重新被置0
+                           //以上三个判断每10us只会判断生效一个
+    static u16 TrigFlagCD = 100;//当TrigFlagCD等于100时，TrigFlag置1(实现的是每100ms获取超声波测距信息)
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+    //ms级计时
+    if(usecond == 100){
+        usecond = 0;
+        //经过了1ms
+
+        if(TrigFlagCD < 100)
+            TrigFlagCD++;
+        else{
+            //激活一次超声波测距模块
+            TrigFlag = 1;
+            TrigFlagCD = 0;
+        }
+        if(msecond == 1000){
+            msecond = 0;
+            //经过了1s
+
+        }
+        msecond++;
+    }
+
 	//HC-SR04
 	if((T2CCP0_STA & 0X8000)==0 && (T2CCP0_STA & 0X4000)){
 		//还未完成捕获，但是已经捕获到高电平了
-		if((T2CCP0_STA&0X3FFF) == 0X3FFF){
-			//高电平太长了(持续时间大于16383*1us)
+		if((T2CCP0_STA&0X3FFF) >= 0x3FFF){
+			//高电平太长了(持续时间大于700*10us)(即距离太远了，就不测了。注意，距离小于5cm也会导致很长的高电平时间，所以这个模块的最短测距大致限制在了5cn)
 			T2CCP0_STA |= 0xFFFF;
 		}
 		else T2CCP0_STA++;
 	}
+    if(TrigFlag == 1){
+        HC_SR04_TRIG_ENABLE;
+		TrigFlag = 0;
+	}
+    else if(TrigFlag == 0){
+        HC_SR04_TRIG_UNABLE;
+        TrigFlag = 2;
+	}
+
+    usecond++;
 }

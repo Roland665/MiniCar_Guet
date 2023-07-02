@@ -23,7 +23,7 @@ void Time0A_Init(u16 reloadValue){
 //	TimerIntRegister( TIMER0_BASE,  TIMER_A, TIMER_IRQHandler);//启动文件中注册完了，不用注册
 
     //设置中断优先级
-	MAP_IntPrioritySet( INT_TIMER0A,  1);
+	MAP_IntPrioritySet( INT_TIMER0A,  2);
 
     //定时器中断允许，中断事件为计数器计数溢出
 	TimerIntEnable(TIMER0_BASE,  TIMER_TIMA_TIMEOUT);
