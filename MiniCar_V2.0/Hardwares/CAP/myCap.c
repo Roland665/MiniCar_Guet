@@ -1,6 +1,5 @@
-#include "CAP/myCap.h"
+#include "myCap.h"
 #include "HC_SR04/hc_sr04.h"
-
 /**
   * @brief    初始化定时器2的模块A作为输入捕获
   * @brief    https://blog.51cto.com/u_15887260/5876654（这篇文章对于输入捕获很有参考价值）

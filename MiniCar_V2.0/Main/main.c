@@ -7,6 +7,7 @@
 #include "CAP/myCap.h"
 #include "Timer/myTimer.h"
 #include "Filter/Filters.h"
+#include "MPU6050/mpu6050.h"
 
 /**************************** 任务定义区 ********************************/
 //AppCreate 任务栈深
@@ -45,6 +46,15 @@ TaskHandle_t Ranging_Task_Handle;
 //Ranging 任务函数
 void Ranging_Task(void *pvParameters);
 
+//MPU6050_Sensor 任务栈深
+#define MPU6050_Sensor_Task_Stack_Deep 128
+//MPU6050_Sensor 任务堆栈
+StackType_t MPU6050_Sensor_Task_Stack[MPU6050_Sensor_Task_Stack_Deep];
+//MPU6050_Sensor 任务句柄
+TaskHandle_t MPU6050_Sensor_Task_Handle;
+//MPU6050_Sensor 任务函数
+void MPU6050_Sensor_Task(void *pvParameters);
+
 /**************************** 全局变量定义区 ********************************/
 float distance = 0;//小车与前方物体间距离(单位cm)
 u16 T2CCP0_STA = 0; //输入捕获状态 bit15表示是否完成一次脉冲捕获，bit14表示是否完成脉冲第一次变化沿，bit13~bit0表示脉冲持续时间(T2CCP0_STA++语句触发周期)
@@ -57,6 +67,9 @@ void setup(void) //串口0初始化
 	HC_SR04_Init();
 	HC_SR04_Start();
 	Time0A_Init(800-1);//系统频率为80Mhz，800/80000000=10us,实现10us级中断
+#ifdef MPU6050
+    mpu6050_Init();
+#endif
 }
 
 int main(void)
@@ -86,7 +99,7 @@ void AppCreate_Task(void *pvParameters)
                (void *)			NULL,					// 传递给任务函数的参数
                (UBaseType_t)	3,						// 任务优先级
                (TaskHandle_t *)	&LED_Task_Handle);		// 任务句柄
-			   
+
    //创建 LED2_Task 任务
    xTaskCreate((TaskFunction_t)	LED2_Task,				// 任务函数
                (const char *)	"LED2_Task",				// 任务名称
@@ -94,7 +107,7 @@ void AppCreate_Task(void *pvParameters)
                (void *)			NULL,					// 传递给任务函数的参数
                (UBaseType_t)	3,						// 任务优先级
                (TaskHandle_t *)	&LED2_Task_Handle);		// 任务句柄
-               
+
    //创建 Ranging_Task 任务
    xTaskCreate((TaskFunction_t)	Ranging_Task,				// 任务函数
                (const char *)	"Ranging_Task",				// 任务名称
@@ -103,9 +116,35 @@ void AppCreate_Task(void *pvParameters)
                (UBaseType_t)	3,						// 任务优先级
                (TaskHandle_t *)	&Ranging_Task_Handle);		// 任务句柄
 
+#ifdef MPU6050
+   //创建 MPU6050_Sensor_Task 任务
+   xTaskCreate((TaskFunction_t)	MPU6050_Sensor_Task,				// 任务函数
+               (const char *)	"MPU6050_Sensor_Task",				// 任务名称
+               (uint16_t)		MPU6050_Sensor_Task_Stack_Deep,	// 任务堆栈大小
+               (void *)			NULL,					// 传递给任务函数的参数
+               (UBaseType_t)	3,						// 任务优先级
+               (TaskHandle_t *)	&MPU6050_Sensor_Task_Handle);		// 任务句柄
+#endif
+
    vTaskDelete(AppCreate_Task_Handle); //删除开始任务 (2)
    taskEXIT_CRITICAL();            //退出临界区
 }
+
+#ifdef MPU6050
+/**
+  * @brief    MPU6050_Sensor_Task 任务函数(未成品)
+  * @brief    通过对MPU6050的数据进行融合计算，得出小车旋转角度
+  */
+void MPU6050_Sensor_Task(void *pvParameters){
+    mpu6050_t mympu6050;
+    while(1){
+        printf("accx=%d  accy=%d  accz=%d\r\n",mympu6050.accX,mympu6050.accY,mympu6050.accZ);
+	    printf("gyroX=%d  gyroY=%d  gyroZ=%d\r\n",mympu6050.gyroX,mympu6050.gyroY,mympu6050.gyroZ);
+        mpu6050_Get_Data(&mympu6050);
+		vTaskDelay(1000);
+    }
+}
+#endif
 
 /**
   * @brief    Ranging_Task 任务函数
@@ -147,19 +186,18 @@ void LED_Task(void *pvParameters){
   * @brief    LED2_Task 任务函数
   * @brief    闪烁灯，体现程序正常跑了
   */
-
 void LED2_Task(void *pvParameters){
    while (1)
    {
-       LED0_RGB_R_ENABLE;
-       vTaskDelay(200);
-       LED0_RGB_R_UNABLE;
-       LED0_RGB_G_ENABLE;
-       vTaskDelay(200);
-       LED0_RGB_G_UNABLE;
-       LED0_RGB_B_ENABLE;
-       vTaskDelay(200);
-       LED0_RGB_B_UNABLE;
+        LED0_RGB_R_ENABLE;
+        vTaskDelay(200);
+        LED0_RGB_R_UNABLE;
+        LED0_RGB_G_ENABLE;
+        vTaskDelay(200);
+        LED0_RGB_G_UNABLE;
+        LED0_RGB_B_ENABLE;
+        vTaskDelay(200);
+        LED0_RGB_B_UNABLE;
    }
 }
 
@@ -182,6 +220,7 @@ void TIMER2A_Handler(void){
         TimerControlEvent(TIMER2_BASE, TIMER_A, TIMER_EVENT_NEG_EDGE); //设置为下降沿捕获 
     }
 }
+
 
 //10us级定时器，实现系统计时
 void TIMER0A_Handler(void){

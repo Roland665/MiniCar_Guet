@@ -9,7 +9,10 @@
             "iterator": "c",
             "filters.h": "c",
             "mypwm.h": "c",
-            "hc_sr04.h": "c"
+            "hc_sr04.h": "c",
+            "sys.h": "c",
+            "iic_hard.h": "c",
+            "mpu6050.h": "c"
         }
     }
 }
