@@ -216,6 +216,46 @@
                 "__vfp_status(x,y)=0"
             ],
             "intelliSenseMode": "${default}"
+        },
+        {
+            "name": "keil",
+            "includePath": [
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\USER",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\CORE",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\STM32F10x_FWLib\\inc",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SYSTEM\\delay",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SYSTEM\\sys",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SYSTEM\\usart",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\LED",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\IWDG",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\TIMER",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SOFTWARE\\TEA",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SOFTWARE\\FreeRTOS\\include",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SOFTWARE\\FreeRTOS\\port\\RVDS\\ARM_CM3",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\KEY",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\DCMOTOR",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\vsensor",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\Zigbee",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SOFTWARE\\PID",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\OLED",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SOFTWARE\\U8G2",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\IIC_Hard",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\Metal_Detection",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\EXTI",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\BEEP",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\HARDWARE\\Track",
+                "C:\\Softwares\\Keil_v5\\ARM\\ARMCC\\include",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\.",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\STM32F10x_FWLib\\src",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SOFTWARE\\FreeRTOS\\port\\MemMang",
+                "c:\\MyFiles\\GitRepository\\MiniCar_Guet\\STM32F103c8_MiniCar\\USER\\..\\SOFTWARE\\FreeRTOS\\src"
+            ],
+            "defines": [
+                "STM32F10X_MD",
+                "USE_STDPERIPH_DRIVER"
+            ],
+            "intelliSenseMode": "${default}"
         }
     ],
     "version": 4
