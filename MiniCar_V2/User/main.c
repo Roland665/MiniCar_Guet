@@ -184,13 +184,13 @@ void LED_Task(void *pvParameters){
    {
        LED0_RGB_R_ENABLE;
        vTaskDelay(1000);
-       LED0_RGB_R_UNABLE;
+       LED0_RGB_R_DISABLE;
        LED0_RGB_G_ENABLE;
        vTaskDelay(1000);
-       LED0_RGB_G_UNABLE;
+       LED0_RGB_G_DISABLE;
        LED0_RGB_B_ENABLE;
        vTaskDelay(1000);
-       LED0_RGB_B_UNABLE;
+       LED0_RGB_B_DISABLE;
    }
 }
 
@@ -203,13 +203,13 @@ void LED2_Task(void *pvParameters){
    {
         LED0_RGB_R_ENABLE;
         vTaskDelay(200);
-        LED0_RGB_R_UNABLE;
+        LED0_RGB_R_DISABLE;
         LED0_RGB_G_ENABLE;
         vTaskDelay(200);
-        LED0_RGB_G_UNABLE;
+        LED0_RGB_G_DISABLE;
         LED0_RGB_B_ENABLE;
         vTaskDelay(200);
-        LED0_RGB_B_UNABLE;
+        LED0_RGB_B_DISABLE;
    }
 }
 
@@ -278,7 +278,7 @@ void TIMER0A_Handler(void){
 		TrigFlag = 0;
 	}
     else if(TrigFlag == 0){
-        HC_SR04_TRIG_UNABLE;
+        HC_SR04_TRIG_DISABLE;
         TrigFlag = 2;
 	}
 

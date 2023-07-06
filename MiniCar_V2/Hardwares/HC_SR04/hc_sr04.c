@@ -12,7 +12,7 @@ void HC_SR04_Init(void){
     													
 	SysCtlPeripheralEnable(HC_SR04_TRIG_GPIOPERIPH);	//使能GPIO时钟	
     GPIOPinTypeGPIOOutput(HC_SR04_TRIG_GPIO, HC_SR04_TRIG_PIN);
-    HC_SR04_TRIG_UNABLE;
+    HC_SR04_TRIG_DISABLE;
 }
 
 /**
