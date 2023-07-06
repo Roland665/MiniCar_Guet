@@ -2,34 +2,33 @@
 #define __MOTOR_H			  	 
 #include "sys.h"
 
-//左电机
-//左电机使能io
-#define MTLEN_GPIO GPIOA
-#define MTLEN_Pin GPIO_Pin_6
-#define MTLEN_Clock RCC_APB2Periph_GPIOA
 //左电机反转io
-#define MTLDIR_GPIO GPIOA
-#define MTLDIR_Pin GPIO_Pin_2
-#define MTLDIR_Clock RCC_APB2Periph_GPIOA
+#define MTLDIR0_GPIO GPIOB
+#define MTLDIR0_Pin GPIO_Pin_8
+#define MTLDIR0_Clock RCC_APB2Periph_GPIOB
+#define MTLDIR1_GPIO GPIOB
+#define MTLDIR1_Pin GPIO_Pin_9		
+#define MTLDIR1_Clock RCC_APB2Periph_GPIOB
 
-//右电机
-//右电机使能io
-#define MTREN_GPIO GPIOA
-#define MTREN_Pin GPIO_Pin_7
-#define MTREN_Clock RCC_APB2Periph_GPIOA
+
 //右电机正转io
-#define MTRDIR_GPIO GPIOA
-#define MTRDIR_Pin GPIO_Pin_3
-#define MTRDIR_Clock RCC_APB2Periph_GPIOA
+#define MTRDIR1_GPIO GPIOB
+#define MTRDIR1_Pin GPIO_Pin_0
+#define MTRDIR1_Clock RCC_APB2Periph_GPIOB
+#define MTRDIR0_GPIO GPIOA
+#define MTRDIR0_Pin GPIO_Pin_12
+#define MTRDIR0_Clock RCC_APB2Periph_GPIOA
 
 #define MTLEN TIM_SetCompare1//左电机pwm控制 
 #define MTREN TIM_SetCompare2//右电机pwm控制
 
-// #define MTLDIR PAout(2)//左电机反转io
-// #define MTRDIR PAout(3)//右电机正转io
+#define MTLDIR0 PBout(8)//左电机反转io
+#define MTLDIR1 PBout(9)//左电机正转io
+#define MTRDIR1 PBout(0)//右电机正转io
+#define MTRDIR0 PAout(12)//右电机反转io
 
 void MTS_Init(void);
-void MTL_Init(void);
-void MTR_Init(void);
-
+void MT_DirctionIO_Init(void);
+void Go(void);
+void Back(void);
 #endif  

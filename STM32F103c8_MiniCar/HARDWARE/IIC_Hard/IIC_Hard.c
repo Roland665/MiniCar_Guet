@@ -14,7 +14,7 @@ void IIC_Init(){
 	
 	I2C_InitTypeDef I2C_InitStructure;
 	I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
-	I2C_InitStructure.I2C_ClockSpeed = 200000;//the fastest is 400Khz
+	I2C_InitStructure.I2C_ClockSpeed = 100000;//the fastest is 400Khz
 	I2C_InitStructure.I2C_DutyCycle =  I2C_DutyCycle_16_9;//这里选择传输数据时低电频占空比2:1,但是要I2C_ClockSpeed>100khz时这个占空比配置才会生效，否则硬件占空比还是在1:1
 	I2C_InitStructure.I2C_Ack = ENABLE;//默认启用应答
 	I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;//7位地址模式

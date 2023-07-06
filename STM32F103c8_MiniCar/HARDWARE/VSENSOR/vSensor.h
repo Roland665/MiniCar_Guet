@@ -17,7 +17,21 @@
 #define VSENSORR_Pin GPIO_Pin_5
 #define VSENSORR_Clock RCC_APB2Periph_GPIOA
 
+
+//◊Û≤‡∫ÏÕ‚±‹’œ
+#define DSENSORL_GPIO GPIOB
+#define DSENSORL_Pin GPIO_Pin_5
+#define DSENSORL_Clock RCC_APB2Periph_GPIOB
+
+//”“≤‡∫ÏÕ‚±‹’œ
+#define DSENSORR_GPIO GPIOB
+#define DSENSORR_Pin GPIO_Pin_4
+#define DSENSORR_Clock RCC_APB2Periph_GPIOB
+
 void vSensors_Init(void);
 void vSensorL_Init(void);
 void vSensorR_Init(void);
+void dSensors_Init(void);
+void dSensorL_Init(void);
+void dSensorR_Init(void);
 #endif  
