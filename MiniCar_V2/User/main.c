@@ -8,6 +8,18 @@
 #include "Timer/myTimer.h"
 #include "Filter/Filters.h"
 #include "MPU6050/mpu6050.h"
+#include "PID/PID.h"
+
+/*******************************************/
+/*
+@version V2.0
+相较于V1系列
+  - 使用无刷电机配合舵机驱动
+  - 核心mcu换为TM4C123GH6
+
+实现了
+  - 
+*/
 
 /**************************** 任务定义区 ********************************/
 //AppCreate 任务栈深
