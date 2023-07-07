@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+            "stdio.h": "c",
+            "key.h": "c",
+            "motor.h": "c",
+            "timer.h": "c",
+            "sys.h": "c",
+            "vsensor.h": "c",
+            "task.h": "c",
+            "list.h": "c",
+            "usart.h": "c",
+            "vadefs.h": "c",
+            "freertos.h": "c",
+            "pid.h": "c",
+            "mpu6050.h": "c",
+            "iic_hard.h": "c"
+        }
+	}
+}

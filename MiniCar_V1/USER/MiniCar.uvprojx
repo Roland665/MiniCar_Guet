@@ -339,7 +339,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_MD,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\USER;..\CORE;..\STM32F10x_FWLib\inc;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\HARDWARE\LED;..\HARDWARE\IWDG;..\HARDWARE\TIMER;..\SOFTWARE\TEA;..\SOFTWARE\FreeRTOS\include;..\SOFTWARE\FreeRTOS\port\RVDS\ARM_CM3;..\HARDWARE\KEY;..\HARDWARE\DCMOTOR;..\HARDWARE\vsensor;..\HARDWARE\Zigbee;..\SOFTWARE\PID;..\HARDWARE\OLED;..\SOFTWARE\U8G2;..\HARDWARE\IIC_Hard;..\HARDWARE\Metal_Detection;..\HARDWARE\EXTI;..\HARDWARE\BEEP;..\HARDWARE\Track;..\HARDWARE\HC_SR04</IncludePath>
+              <IncludePath>..\USER;..\CORE;..\STM32F10x_FWLib\inc;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\HARDWARE\LED;..\HARDWARE\IWDG;..\HARDWARE\TIMER;..\SOFTWARE\TEA;..\SOFTWARE\FreeRTOS\include;..\SOFTWARE\FreeRTOS\port\RVDS\ARM_CM3;..\HARDWARE\KEY;..\HARDWARE\DCMOTOR;..\HARDWARE\vsensor;..\HARDWARE\Zigbee;..\SOFTWARE\PID;..\HARDWARE\OLED;..\SOFTWARE\U8G2;..\HARDWARE\IIC_Hard;..\HARDWARE\Metal_Detection;..\HARDWARE\EXTI;..\HARDWARE\BEEP;..\HARDWARE\Track;..\HARDWARE\HC_SR04;..\HARDWARE\MPU6050</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -477,6 +477,11 @@
               <FileName>hc_sr04.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\HC_SR04\hc_sr04.c</FilePath>
+            </File>
+            <File>
+              <FileName>mpu6050.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\MPU6050\mpu6050.c</FilePath>
             </File>
           </Files>
         </Group>
