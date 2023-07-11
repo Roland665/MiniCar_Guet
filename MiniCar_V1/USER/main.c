@@ -159,8 +159,8 @@ u8 v2[2]         = {0x02, 0x64};// 中幅度转弯差速
 u8 v3[2]         = {0x01, 0x64};// 大幅度转弯差速
 u8 v4[2]         = {0x00, 0x00};// 寻迹异常
 u8 pwmerr        = 1;//pwm调速幅度
-u8 lV            = 0x10; // 沿线行驶时左轮推荐PWM占空比
-u8 rV            = 0x10; // 沿线行驶时右轮推荐PWM占空比
+u8 lV            = 0x15; // 沿线行驶时左轮推荐PWM占空比
+u8 rV            = 0x15; // 沿线行驶时右轮推荐PWM占空比
 
 u8 runRoad = 1;// this variable set 1 means car will along the out line, set 2 this car will along the in line
 u16 CHANGEROADTIME_MAX = 0x3c*10;
@@ -182,6 +182,7 @@ u8 distanceWarningFlag = 0;// 距离过近警告标志位, 过近时置1
 
 float followDistance = 25;//跟随合理距离(25cm)
 
+u8 lightFlag = 0;
 /*
 *************************************************************************
 *                             函数声明
@@ -245,7 +246,7 @@ static void Setup(void)
     Metal_Detection_Init();
     track_Init();
 	HC_SR04_Init();
-
+	TestLED = 0;
 }
 
 static void AppTaskCreate(void)
@@ -406,7 +407,7 @@ static void AppTaskCreate(void)
  */
 static void MetalDetection_Task(void *parameter)
 {
-	while(1);
+    // while(1);
     while (1) {
         if (carMode == 1 && 1 == GPIO_ReadInputDataBit(METAL_DET_GPIO, METAL_DET_Pin)) {
             //自巡航模式时识别硬币
@@ -488,7 +489,6 @@ static void OLEDShowing_Task(void *parameter)
             sprintf(str, "%.1f", distance);
             u8g2_DrawStr(&u8g2, 32, 38, str); // 距离
         } else {
-
             u8g2_SetFont(&u8g2, u8g2_font_emoticons21_tr); // 表情大全
             u8g2_DrawGlyphX2(&u8g2, 40, 50, 0x0030);       // 检测到硬币显示表情
         }
@@ -577,6 +577,7 @@ static void Run_Task(void *parameter)
             // if mode is 0, means the car was in manual control mode
             //当距离过近
             if(distanceWarningFlag == 1){
+				BEEP = 1;
                 MTLEN(TIM3, 0);
                 MTREN(TIM3, 0);
                 Back();
@@ -603,12 +604,14 @@ static void Run_Task(void *parameter)
                 MTLEN(TIM3, 0);
                 MTREN(TIM3, 0);
                 vTaskDelay(150);
+				BEEP = 0;
             }
 				
         }
 		else if(carMode == 2){
             // if mode is 2, means the car was in following mode
             if(distanceWarningFlag == 1){
+				BEEP = 1;
                 lTargetV = lV+10;
                 rTargetV = rV+10;
                 //if too close
@@ -616,6 +619,7 @@ static void Run_Task(void *parameter)
                 
             }
             else if(distanceWarningFlag == 0){
+				BEEP = 0;
                 if(turningTrend == 0){
                     //如果判断物体在前方
 					if(distance - followDistance < 1 && distance - followDistance > -1)
@@ -656,6 +660,7 @@ static void AnalyseCommand_Task(void *parameter)
         }
 
         if (commands[0] == 0x00) {
+			lightFlag = 0;
             runTimeEF = 0;//停止计时
             lTargetV = 0;
             rTargetV = 0;
@@ -666,24 +671,28 @@ static void AnalyseCommand_Task(void *parameter)
             printf("停车~\r\n");
         }
 		else if (commands[0] == 0x01) {
+			lightFlag = 0;
             Go();
 			runTimeEF = 1;//开始计时
             carMode = 1;//自动挡
             printf("开车！自巡航模式\r\n");
         }
 		else if (commands[0] == 0x02) {
+			lightFlag = 1;
 			//左转
             carMode = 0;//手动挡
             lTargetV = v2[0];
             rTargetV = v2[1];
         }
 		else if (commands[0] == 0x03) {
+			lightFlag = 1;
 			//右转
             carMode = 0;//手动挡
             lTargetV = v2[1];
             rTargetV = v2[0];
         } 
 		else if (commands[0] == 0x04) {
+			lightFlag = 1;
             //倒车
 			carMode = 0;//手动挡
 			Back();
@@ -726,6 +735,7 @@ static void AnalyseCommand_Task(void *parameter)
             BEEP = 0;
         } 
 		else if (commands[0] == 0x08) {
+			lightFlag = 0;
             //先停下并切换为直行模式
 			Go();
             carMode  = 0; // 手动挡
@@ -747,6 +757,7 @@ static void AnalyseCommand_Task(void *parameter)
             carMode = 2;
         }
 		else if (commands[0] == 0x09){
+			lightFlag = 0;
 			Go();
             carMode  = 0; // 手动挡
             lTargetV = commands[1];
@@ -860,11 +871,13 @@ static void ListeningSensors_Task(void *parameter)
  */
 static void LED_Task(void *parameter)
 {
-    while (1) {       
-        TestLED = 0;
-        vTaskDelay(500 / portTICK_PERIOD_MS); /*延时500ms*/
-        TestLED = 1;
-        vTaskDelay(500 / portTICK_PERIOD_MS); /*延时500ms*/
+    while (1) {
+		if(lightFlag == 1){
+			TestLED = 0;
+			vTaskDelay(300 / portTICK_PERIOD_MS); /*延时300ms*/
+			TestLED = 1;
+			vTaskDelay(300 / portTICK_PERIOD_MS); /*延时300ms*/
+		}
     }
 }
 
@@ -924,7 +937,7 @@ void USART1_IRQHandler(void)
 {
     if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) { // 接收中断
         if (USART1_RX_STA < USART_REC_LEN) {
-            usart1RXTime                 = 0;
+            usart1RXTime = 0;
             USART1_RX_BUF[USART1_RX_STA] = USART_ReceiveData(USART1); // 读取接收到的数据
             USART1_RX_STA++;
         } else {
