@@ -3,13 +3,13 @@
 
 
 /**
- * @brief    ´´½¨Ò»¸öÎ»ÖÃÊ½PID¶ÔÏó£¬ÔÚÊ¹ÓÃ PID_Position º¯ÊıÇ°µ÷ÓÃ
- * @param    kp             : ±ÈÀıÏµÊı
- * @param    ki             : »ı·ÖÏµÊı
- * @param    kd             : Î¢·ÖÏµÊı
- * @param    result_Max     : Êä³öÏŞ·ù
- * @param    intergral_Max  : »ı·ÖÏŞ·ù
- * @retval   PID¶ÔÏó
+ * @brief    ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Î»ï¿½ï¿½Ê½PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ PID_Position ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½
+ * @param    kp             : ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
+ * @param    ki             : ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
+ * @param    kd             : Î¢ï¿½ï¿½Ïµï¿½ï¿½
+ * @param    result_Max     : ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+ * @param    intergral_Max  : ï¿½ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+ * @retval   PIDï¿½ï¿½ï¿½ï¿½
  */
 PID* PID_Position_Create(float kp, float ki, float kd, float result_Max, float intergral_Max){
     PID* object = (PID*)malloc(sizeof(PID));
@@ -26,11 +26,11 @@ PID* PID_Position_Create(float kp, float ki, float kd, float result_Max, float i
 
 
 /**
- * @brief    ´´½¨Ò»¸öÔöÁ¿Ê½PID¶ÔÏó£¬ÔÚÊ¹ÓÃ PID_Increasing º¯ÊıÇ°µ÷ÓÃ
- * @param    kp: ±ÈÀıÏµÊı
- * @param    ki: »ı·ÖÏµÊı
- * @param    kd: Î¢·ÖÏµÊı
- * @retval   PID¶ÔÏó
+ * @brief    ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ PID_Increasing ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½
+ * @param    kp: ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
+ * @param    ki: ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
+ * @param    kd: Î¢ï¿½ï¿½Ïµï¿½ï¿½
+ * @retval   PIDï¿½ï¿½ï¿½ï¿½
  */
 PID* PID_Increasing_Create(float kp, float ki, float kd){
     PID* object = (PID*)malloc(sizeof(PID));
@@ -46,50 +46,49 @@ PID* PID_Increasing_Create(float kp, float ki, float kd){
 
 
 /**
- * @brief    Î»ÖÃÊ½PIDËã·¨
- * @param    pid: PID¶ÔÏó£¬ÀïÃæÓ¦µ±´æ´¢ÁË¼ÆËã±ØÒªµÄÊı¾İ
- * @param    err_new:×îĞÂµÄ²îÖµ
- * @retval   Êä³öPID½á¹û
+ * @brief    Î»ï¿½ï¿½Ê½PIDï¿½ã·¨
+ * @param    pid: PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½æ´¢ï¿½Ë¼ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param    err_new:ï¿½ï¿½ï¿½ÂµÄ²ï¿½Öµ
+ * @retval   ï¿½ï¿½ï¿½PIDï¿½ï¿½ï¿½
  */
 float PID_Position(PID* pid, float err_new){
     float result;
-    //¸üĞÂpid¶ÔÏóÄÚÈİ
+    //ï¿½ï¿½ï¿½ï¿½pidï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     pid->err_old_first = pid->err_new;
     pid->err_new = err_new;
     pid->intergral += pid->err_new;
-    //»ı·ÖÏŞ·ù
-    pid->intergral = pid->intergral > pid->intergral_Max ? pid->intergral_Max : pid->intergral; //¿ØÖÆ»ı·ÖÉÏÏŞ·ù
-    pid->intergral = pid->intergral <-pid->intergral_Max/2 ?-pid->intergral_Max/2 : pid->intergral; //¿ØÖÆ»ı·ÖÏÂÏŞ·ù
-    //¼ÆËãpid
+    //ï¿½ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    pid->intergral = pid->intergral > pid->intergral_Max ? pid->intergral_Max : pid->intergral; //ï¿½ï¿½ï¿½Æ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    pid->intergral = pid->intergral <-pid->intergral_Max/2 ?-pid->intergral_Max/2 : pid->intergral; //ï¿½ï¿½ï¿½Æ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    //ï¿½ï¿½ï¿½ï¿½pid
     result = pid->kp*pid->err_new + pid->ki*pid->intergral + pid->kd*(pid->err_new - pid->err_old_first);
-    //Êä³öÏŞ·ù
-    result = result > pid->result_Max ? pid->result_Max : result; //¿ØÖÆÊä³öÉÏÏŞ·ù
-    result = result <-pid->result_Max ?-pid->result_Max : result; //¿ØÖÆÊä³öÏÂÏŞ·ù
-    //Êä³öpid½á¹û
+    //ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    result = result > pid->result_Max ? pid->result_Max : result; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    result = result <-pid->result_Max ?-pid->result_Max : result; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    //ï¿½ï¿½ï¿½pidï¿½ï¿½ï¿½
     return result;
 }
 
-
 /**
- * @brief    ÔöÁ¿Ê½PIDËã·¨
- * @param    pid: PID¶ÔÏó£¬ÀïÃæÓ¦µ±´æ´¢ÁË¼ÆËã±ØÒªµÄÊı¾İ
- * @param    err_new:×îĞÂµÄ²îÖµ
- * @param    result_inc_Max: Êä³öÏŞ·ù
- * @retval   Êä³öµÄÔöÁ¿
+ * @brief    ï¿½ï¿½ï¿½ï¿½Ê½PIDï¿½ã·¨
+ * @param    pid: PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½æ´¢ï¿½Ë¼ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param    err_new:ï¿½ï¿½ï¿½ÂµÄ²ï¿½Öµ
+ * @param    result_inc_Max: ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+ * @retval   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 
 float PID_Increasing(PID* pid, float err_new, float result_inc_Max){
     float result_inc;
-    //¸üĞÂpid¶ÔÏóÄÚÈİ
+    //ï¿½ï¿½ï¿½ï¿½pidï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     pid->err_old_second = pid->err_old_first;
     pid->err_old_first = pid->err_new;
     pid->err_new = err_new;
     pid->result_inc_Max = result_inc_Max;
-    //¼ÆËãpid
-    result_inc = pid->kp*pid->err_new - pid->ki*pid->err_old_first + pid->kd*pid->err_old_second;
-    //Êä³öÏŞ·ù
-    result_inc = result_inc > pid->result_inc_Max ? pid->result_inc_Max : result_inc;  //¿ØÖÆÊä³öÉÏÏŞ·ù
-    result_inc = result_inc <-pid->result_inc_Max ?-pid->result_inc_Max : result_inc; //¿ØÖÆÊä³öÏÂÏŞ·ù
-    //Êä³öpid½á¹û
+    //ï¿½ï¿½ï¿½ï¿½pid
+    result_inc = pid->kp*(pid->err_new - pid->err_old_first) + pid->ki*pid->err_old_first + pid->kd*(pid->err_new - 2*pid->err_old_first + pid->err_old_second);
+    //ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    result_inc = result_inc > pid->result_inc_Max ? pid->result_inc_Max : result_inc; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    result_inc = result_inc <-pid->result_inc_Max ?-pid->result_inc_Max : result_inc; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ş·ï¿½
+    //ï¿½ï¿½ï¿½pidï¿½ï¿½ï¿½
     return result_inc;
 }
