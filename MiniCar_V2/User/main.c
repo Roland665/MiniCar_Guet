@@ -9,6 +9,8 @@
 #include "Filter/Filters.h"
 #include "MPU6050/mpu6050.h"
 #include "PID/PID.h"
+#include "BEEP/beep.h"
+#include "MOTOR/motor.h"
 
 /*******************************************/
 /*
@@ -16,7 +18,8 @@
 相较于V1系列
   - 使用无刷电机配合舵机驱动
   - 核心mcu换为TM4C123GH6
-
+  - 
+  
 实现了
   - 
 */
@@ -58,6 +61,7 @@ TaskHandle_t Ranging_Task_Handle;
 //Ranging 任务函数
 void Ranging_Task(void *pvParameters);
 
+#ifdef MPU6050
 //MPU6050_Sensor 任务栈深
 #define MPU6050_Sensor_Task_Stack_Deep 128
 //MPU6050_Sensor 任务堆栈
@@ -66,6 +70,17 @@ StackType_t MPU6050_Sensor_Task_Stack[MPU6050_Sensor_Task_Stack_Deep];
 TaskHandle_t MPU6050_Sensor_Task_Handle;
 //MPU6050_Sensor 任务函数
 void MPU6050_Sensor_Task(void *pvParameters);
+#endif
+
+//Run 任务栈深
+#define Run_Task_Stack_Deep 128
+//Run 任务堆栈
+StackType_t Run_Task_Stack[Run_Task_Stack_Deep];
+//Run 任务句柄
+TaskHandle_t Run_Task_Handle;
+//Run 任务函数
+void Run_Task(void *pvParameters);
+
 
 /**************************** 全局变量定义区 ********************************/
 float distance = 0;//小车与前方物体间距离(单位cm)
@@ -75,19 +90,22 @@ void setup(void) //串口0初始化
 {
 	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ); //设置系统时钟为80MHz
 	LED_Init();
-	Usart0_Init(115200);
+    BEEP_Init();
+	Uart0_Init(115200);
+	Uart1_Init(115200);
 	HC_SR04_Init();
 	HC_SR04_Start();
 	Time0A_Init(800-1);//系统频率为80Mhz，800/80000000=10us,实现10us级中断
 #ifdef MPU6050
     mpu6050_Init();
 #endif
+    Motor_Init();
 }
 
 int main(void)
 {
 	setup(); // 初始化
-    printf("\r\nProgram is run-begining\r\n系统时钟频率为%u\r\n",SysCtlClockGet());
+    printf("\r\nProgram is Run-begining\r\n系统时钟频率为%u\r\n",SysCtlClockGet());
    /* 创建 AppTaskCreate 任务 */
 	xTaskCreate((TaskFunction_t)	AppCreate_Task,       		// 任务函数
 				(const char *)		"AppCreate_Task",       	// 任务名称
@@ -124,22 +142,40 @@ void AppCreate_Task(void *pvParameters)
    xTaskCreate((TaskFunction_t)	Ranging_Task,				// 任务函数
                (const char *)	"Ranging_Task",				// 任务名称
                (uint16_t)		Ranging_Task_Stack_Deep,	// 任务堆栈大小
-               (void *)			NULL,					// 传递给任务函数的参数
-               (UBaseType_t)	3,						// 任务优先级
+               (void *)			NULL,					    // 传递给任务函数的参数
+               (UBaseType_t)	3,						    // 任务优先级
                (TaskHandle_t *)	&Ranging_Task_Handle);		// 任务句柄
 
 #ifdef MPU6050
    //创建 MPU6050_Sensor_Task 任务
-   xTaskCreate((TaskFunction_t)	MPU6050_Sensor_Task,				// 任务函数
-               (const char *)	"MPU6050_Sensor_Task",				// 任务名称
+   xTaskCreate((TaskFunction_t)	MPU6050_Sensor_Task,			// 任务函数
+               (const char *)	"MPU6050_Sensor_Task",			// 任务名称
                (uint16_t)		MPU6050_Sensor_Task_Stack_Deep,	// 任务堆栈大小
+               (void *)			NULL,					        // 传递给任务函数的参数
+               (UBaseType_t)	3,						        // 任务优先级
+               (TaskHandle_t *)	&MPU6050_Sensor_Task_Handle);	// 任务句柄
+#endif
+
+   //创建 Run_Task 任务
+   xTaskCreate((TaskFunction_t)	Run_Task,				// 任务函数
+               (const char *)	"Run_Task",				// 任务名称
+               (uint16_t)		Run_Task_Stack_Deep,	// 任务堆栈大小
                (void *)			NULL,					// 传递给任务函数的参数
                (UBaseType_t)	3,						// 任务优先级
-               (TaskHandle_t *)	&MPU6050_Sensor_Task_Handle);		// 任务句柄
-#endif
+               (TaskHandle_t *)	&Run_Task_Handle);		// 任务句柄
 
    vTaskDelete(AppCreate_Task_Handle); //删除开始任务 (2)
    taskEXIT_CRITICAL();            //退出临界区
+}
+
+/**
+  * @brief    Run_Task 任务函数
+  * @brief    对电极的一个闭环控制流程任务，获得目标速度 -> PID -> 输出目标速度
+  */
+void Run_Task(void *pvParameters){
+    while(1){
+        
+    }
 }
 
 #ifdef MPU6050
@@ -259,7 +295,6 @@ void TIMER0A_Handler(void){
         if(msecond == 1000){
             msecond = 0;
             //经过了1s
-
         }
         msecond++;
     }
@@ -284,3 +319,45 @@ void TIMER0A_Handler(void){
 
     usecond++;
 }
+
+//串口0中断
+void UART0_Handler(void){
+    uint32_t flag = UARTIntStatus(UART0_BASE,true);
+    if(flag == UART_INT_RX || flag == UART_INT_RT){
+        while(UARTCharsAvail(UART0_BASE)){
+		    //if FIFO have data
+            if (UART0_RX_STA < UART_REC_LEN) {
+                uart0RXTime = 0;
+                UART0_RX_BUF[UART0_RX_STA] = UARTCharGet(UART0_BASE); // 读取接收到的数据
+                UART0_RX_STA++;
+            } else {
+                UART0_RX_STA = 0;
+            }
+        }
+    }
+    UARTIntClear(UART0_BASE,flag);
+}
+
+//串口1中断
+void UART1_Handler(void){
+    uint32_t flag = UARTIntStatus(UART1_BASE,true);
+    if(flag == UART_INT_RX || flag == UART_INT_RT){
+        while(UARTCharsAvail(UART1_BASE)){
+		    //if FIFO have data
+            if (UART1_RX_STA < UART_REC_LEN) {
+                uart1RXTime = 0;
+                UART1_RX_BUF[UART1_RX_STA] = UARTCharGet(UART1_BASE); // 读取接收到的数据
+                UART1_RX_STA++;
+            } else {
+                UART1_RX_STA = 0;
+            }
+        }
+    }
+    UARTIntClear(UART1_BASE,flag);
+}
+
+
+
+
+
+
