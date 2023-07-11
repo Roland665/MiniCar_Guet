@@ -17,6 +17,7 @@
 #include "utils/uartstdio.h"
 #include "driverlib/timer.h"
 #include "inc/hw_ints.h"
+#include "driverlib/interrupt.h"
 #include "TM4C123GH6PM.h"
 
 

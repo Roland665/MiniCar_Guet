@@ -8,8 +8,7 @@
   */
 void HC_SR04_Init(void){
 //	M0PWM2_Init(65535, 800);//PWM周期为65535拉满，脉冲宽度为10us  10/10^6/80Mhz = 800
-    T2CCP0_Init();
-    													
+    T2CCP0_Init();				
 	SysCtlPeripheralEnable(HC_SR04_TRIG_GPIOPERIPH);	//使能GPIO时钟	
     GPIOPinTypeGPIOOutput(HC_SR04_TRIG_GPIO, HC_SR04_TRIG_PIN);
     HC_SR04_TRIG_DISABLE;
