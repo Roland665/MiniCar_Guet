@@ -37,27 +37,27 @@ void IIC1_Init(void){
 //初始化硬件I2C2
 void IIC2_Init(void){
 	//enable I2C module
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
+	MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C2);
 
     //reset I2C module
-	SysCtlPeripheralReset(SYSCTL_PERIPH_I2C2);
+	MAP_SysCtlPeripheralReset(SYSCTL_PERIPH_I2C2);
 
 	//enable GPIO peripheral that contains I2C
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+	MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
 
-	// Configure the pin muxing for I2C3 functions on port D0 and D1.
-	GPIOPinConfigure(GPIO_PE4_I2C2SCL);
-	GPIOPinConfigure(GPIO_PE5_I2C2SDA);
+	// Configure the pin muxing for I2C2 functions on port E4 and E5.
+	MAP_GPIOPinConfigure(GPIO_PE4_I2C2SCL);
+	MAP_GPIOPinConfigure(GPIO_PE5_I2C2SDA);
 
 	// Select the I2C function for these pins.
-	GPIOPinTypeI2CSCL(GPIOE_BASE, GPIO_PIN_4);
-	GPIOPinTypeI2C(GPIOE_BASE, GPIO_PIN_5);
+	MAP_GPIOPinTypeI2CSCL(GPIOE_BASE, GPIO_PIN_4);
+	MAP_GPIOPinTypeI2C(GPIOE_BASE, GPIO_PIN_5);
 
 	// Enable and initialize the I2C3 master module.  
     // Use the system clock for the I2C3 module.  
     // The last parameter sets the I2C data transfer rate.
 	// If false the data rate is set to 100kbps and if true the data rate will be set to 400kbps.
-	I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
+	MAP_I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
 
 	//clear I2C FIFOs
 	HWREG(I2C2_BASE + I2C_O_FIFOCTL) = 80008000;
@@ -66,27 +66,27 @@ void IIC2_Init(void){
 //初始化硬件I2C3
 void IIC3_Init(void){
 	//enable I2C module
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C3);
+	MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_I2C3);
 
     //reset I2C module
-	SysCtlPeripheralReset(SYSCTL_PERIPH_I2C3);
+	MAP_SysCtlPeripheralReset(SYSCTL_PERIPH_I2C3);
 
 	//enable GPIO peripheral that contains I2C
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+	MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
 
 	// Configure the pin muxing for I2C3 functions on port D0 and D1.
-	GPIOPinConfigure(GPIO_PD0_I2C3SCL);
-	GPIOPinConfigure(GPIO_PD1_I2C3SDA);
+	MAP_GPIOPinConfigure(GPIO_PD0_I2C3SCL);
+	MAP_GPIOPinConfigure(GPIO_PD1_I2C3SDA);
 
 	// Select the I2C function for these pins.
-	GPIOPinTypeI2CSCL(GPIOD_BASE, GPIO_PIN_0);
-	GPIOPinTypeI2C(GPIOD_BASE, GPIO_PIN_1);
+	MAP_GPIOPinTypeI2CSCL(GPIOD_BASE, GPIO_PIN_0);
+	MAP_GPIOPinTypeI2C(GPIOD_BASE, GPIO_PIN_1);
 
 	// Enable and initialize the I2C3 master module.  
     // Use the system clock for the I2C3 module.  
     // The last parameter sets the I2C data transfer rate.
 	// If false the data rate is set to 100kbps and if true the data rate will be set to 400kbps.
-	I2CMasterInitExpClk(I2C3_BASE, SysCtlClockGet(), false);
+	MAP_I2CMasterInitExpClk(I2C3_BASE, SysCtlClockGet(), false);
 
 	//clear I2C FIFOs
 	HWREG(I2C3_BASE + I2C_O_FIFOCTL) = 80008000;
