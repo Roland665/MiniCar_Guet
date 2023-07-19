@@ -19,7 +19,8 @@
             "freertos.h": "c",
             "pid.h": "c",
             "mpu6050.h": "c",
-            "iic_hard.h": "c"
+            "iic_hard.h": "c",
+            "oled.h": "c"
         }
 	}
 }

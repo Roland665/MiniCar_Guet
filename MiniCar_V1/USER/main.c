@@ -463,7 +463,6 @@ static void OLEDShowing_Task(void *parameter)
         u8g2_ClearBuffer(&u8g2); // clear the u8g2 buffer
         if (metalDiscoveryFlag == 0 && distanceWarningFlag == 0) {
             v = (lVelocity + rVelocity) / 2;
-            u8g2_ClearBuffer(&u8g2);                         // wake up display
             u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t); // 图标大全
             u8g2_DrawGlyph(&u8g2, 82, 20, 0x0047);           // 硬币数量显示图标
             u8g2_DrawGlyph(&u8g2, 0, 63, 0x029E);            // 小电驴图标
