@@ -3,13 +3,13 @@
 
 
 /**
- * @brief    ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Î»ï¿½ï¿½Ê½PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ PID_Position ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½
- * @param    kp             : ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
- * @param    ki             : ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
- * @param    kd             : Î¢ï¿½ï¿½Ïµï¿½ï¿½
- * @param    result_Max     : ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
- * @param    intergral_Max  : ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
- * @retval   PIDï¿½ï¿½ï¿½ï¿½
+ * @brief    Create an pid-data object for positional PID algorithm 
+ * @param    kp             : Proportionality coefficient
+ * @param    ki             : Integral coefficient
+ * @param    kd             : Differential coefficient
+ * @param    result_Max     : Output limiting
+ * @param    intergral_Max  : Integral limiting
+ * @retval   pid-data object
  */
 PID* PID_Position_Create(float kp, float ki, float kd, float result_Max, float intergral_Max){
     PID* object = (PID*)malloc(sizeof(PID));
@@ -26,11 +26,11 @@ PID* PID_Position_Create(float kp, float ki, float kd, float result_Max, float i
 
 
 /**
- * @brief    ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ PID_Increasing ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½
- * @param    kp: ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
- * @param    ki: ï¿½ï¿½ï¿½ï¿½Ïµï¿½ï¿½
- * @param    kd: Î¢ï¿½ï¿½Ïµï¿½ï¿½
- * @retval   PIDï¿½ï¿½ï¿½ï¿½
+ * @brief    Create an pid-data object for incremental PID algorithm
+ * @param    kp             : Proportionality coefficient
+ * @param    ki             : Integral coefficient
+ * @param    kd             : Differential coefficient
+ * @retval   pid-data object
  */
 PID* PID_Increasing_Create(float kp, float ki, float kd){
     PID* object = (PID*)malloc(sizeof(PID));
@@ -46,49 +46,47 @@ PID* PID_Increasing_Create(float kp, float ki, float kd){
 
 
 /**
- * @brief    Î»ï¿½ï¿½Ê½PIDï¿½ã·¨
- * @param    pid: PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½æ´¢ï¿½Ë¼ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
- * @param    err_new:ï¿½ï¿½ï¿½ÂµÄ²ï¿½Öµ
- * @retval   ï¿½ï¿½ï¿½PIDï¿½ï¿½ï¿½
+ * @brief    Positional PID algorithm 
+ * @param    pid    : pid-data object
+ * @param    err_new: the new error
+ * @retval   the result of the calculation
  */
 float PID_Position(PID* pid, float err_new){
     float result;
-    //ï¿½ï¿½ï¿½ï¿½pidï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    //pid-data µü´ú
     pid->err_old_first = pid->err_new;
     pid->err_new = err_new;
     pid->intergral += pid->err_new;
-    //ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    pid->intergral = pid->intergral > pid->intergral_Max ? pid->intergral_Max : pid->intergral; //ï¿½ï¿½ï¿½Æ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    pid->intergral = pid->intergral <-pid->intergral_Max/2 ?-pid->intergral_Max/2 : pid->intergral; //ï¿½ï¿½ï¿½Æ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    //ï¿½ï¿½ï¿½ï¿½pid
+    //»ý·ÖÏÞ·ù
+    pid->intergral = pid->intergral > pid->intergral_Max ? pid->intergral_Max : pid->intergral;
+    pid->intergral = pid->intergral <-pid->intergral_Max/2 ?-pid->intergral_Max/2 : pid->intergral;
+    //pid ¼ÆËã
     result = pid->kp*pid->err_new + pid->ki*pid->intergral + pid->kd*(pid->err_new - pid->err_old_first);
-    //ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    result = result > pid->result_Max ? pid->result_Max : result; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    result = result <-pid->result_Max ?-pid->result_Max : result; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    //ï¿½ï¿½ï¿½pidï¿½ï¿½ï¿½
+    //Êä³öÏÞ·ù
+    result = result > pid->result_Max ? pid->result_Max : result;
+    result = result <-pid->result_Max ?-pid->result_Max : result;
     return result;
 }
 
 /**
- * @brief    ï¿½ï¿½ï¿½ï¿½Ê½PIDï¿½ã·¨
- * @param    pid: PIDï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½æ´¢ï¿½Ë¼ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
- * @param    err_new:ï¿½ï¿½ï¿½ÂµÄ²ï¿½Öµ
- * @param    result_inc_Max: ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
- * @retval   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @brief    Incremental PID algorithm
+ * @param    pid            : pid-data object
+ * @param    err_new        : the new error
+ * @param    result_inc_Max : Incremental limiting
+ * @retval   the result of the calculation
  */
 
 float PID_Increasing(PID* pid, float err_new, float result_inc_Max){
     float result_inc;
-    //ï¿½ï¿½ï¿½ï¿½pidï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    //pid-data µü´ú
     pid->err_old_second = pid->err_old_first;
     pid->err_old_first = pid->err_new;
     pid->err_new = err_new;
     pid->result_inc_Max = result_inc_Max;
-    //ï¿½ï¿½ï¿½ï¿½pid
-    result_inc = pid->kp*(pid->err_new - pid->err_old_first) + pid->ki*pid->err_old_first + pid->kd*(pid->err_new - 2*pid->err_old_first + pid->err_old_second);
-    //ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    result_inc = result_inc > pid->result_inc_Max ? pid->result_inc_Max : result_inc; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    result_inc = result_inc <-pid->result_inc_Max ?-pid->result_inc_Max : result_inc; //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½
-    //ï¿½ï¿½ï¿½pidï¿½ï¿½ï¿½
+    //pid ¼ÆËã
+    result_inc = pid->kp*(pid->err_new - pid->err_old_first) + pid->ki*pid->err_new + pid->kd*(pid->err_new - 2*pid->err_old_first + pid->err_old_second);
+    //ÔöÁ¿ÏÞ·ù
+    result_inc = result_inc > pid->result_inc_Max ? pid->result_inc_Max : result_inc; 
+    result_inc = result_inc <-pid->result_inc_Max ?-pid->result_inc_Max : result_inc;
     return result_inc;
 }

@@ -4,7 +4,7 @@
 #include "semphr.h"
 #include "sys.h"
 #include "usart.h"
-#include <stdarg.h> //±ê×¼C¿âÎÄ¼þ,ÈÃº¯ÊýÄÜ¹»½ÓÊÕ¿É±ä²ÎÊý
+#include <stdarg.h> //ï¿½ï¿½×¼Cï¿½ï¿½ï¿½Ä¼ï¿½,ï¿½Ãºï¿½ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½Õ¿É±ï¿½ï¿½ï¿½ï¿½
 #include "led.h"
 #include "key.h"
 #include "motor.h"
@@ -20,130 +20,130 @@
 /*******************************************/
 /*
 @version v1.1.2
-Ïà½ÏÓÚv1.1.1ÐÞ¸Ä£º
-- Ôö¼Ó
-	- ³¬Éù²¨²â¾à
-	- ºìÍâ±ÜÕÏ
-	- ³¬Éù²¨¸úËæ
+ï¿½ï¿½ï¿½ï¿½ï¿½v1.1.1ï¿½Þ¸Ä£ï¿½
+- ï¿½ï¿½ï¿½ï¿½
+	- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	- ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-È±µã:
-- ¸Ð¾õ²âËÙ»¹¿ÉÒÔÓÅ»¯£¬ºÏ²¢ºÍ²âËÙÓÐ¹ØµÄÈÎÎñ£¬È¡ÏûÐÅºÅÁ¿£¬Ö±½ÓË³ÐòÖ´ÐÐ
-- µç»úÎÈ¶¨ÐÔµÍ£¬ÄÑÒÔÏßÐÔµ÷ËÙ
+È±ï¿½ï¿½:
+- ï¿½Ð¾ï¿½ï¿½ï¿½ï¿½Ù»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½ï¿½ï¿½ï¿½Ï²ï¿½ï¿½Í²ï¿½ï¿½ï¿½ï¿½Ð¹Øµï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Ë³ï¿½ï¿½Ö´ï¿½ï¿½
+- ï¿½ï¿½ï¿½ï¿½È¶ï¿½ï¿½ÔµÍ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôµï¿½ï¿½ï¿½
 */
 
-/******************************* ºê¶¨Òå ************************************/
-/*×î¶à¿ÉÒÔ´æ´¢ 2 ¸ö u8ÀàÐÍ±äÁ¿µÄ¶ÓÁÐ */
+/******************************* ï¿½ê¶¨ï¿½ï¿½ ************************************/
+/*ï¿½ï¿½ï¿½ï¿½ï¿½Ô´æ´¢ 2 ï¿½ï¿½ u8ï¿½ï¿½ï¿½Í±ï¿½ï¿½ï¿½ï¿½Ä¶ï¿½ï¿½ï¿½ */
 #define REPLACE_V_QUEUE_LENGTH 2
 #define REPLACE_V_ITEM_SIZE    sizeof(u8)
 
-/*×î¶à¿ÉÒÔ´æ´¢ 7 ¸ö u8ÀàÐÍ±äÁ¿µÄ¶ÓÁÐ */
+/*ï¿½ï¿½ï¿½ï¿½ï¿½Ô´æ´¢ 7 ï¿½ï¿½ u8ï¿½ï¿½ï¿½Í±ï¿½ï¿½ï¿½ï¿½Ä¶ï¿½ï¿½ï¿½ */
 #define WIRELESSCOMMAND_QUEUE_LENGTH 7
 #define WIRELESSCOMMAND_ITEM_SIZE    sizeof(u8)
 
-/**************************** ÈÎÎñ¾ä±ú ********************************/
-/* AppTaskCreate ÈÎÎñ¾ä±ú */
+/**************************** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ********************************/
+/* AppTaskCreate ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 static TaskHandle_t AppTaskCreate_Handle = NULL;
-/* LED ÈÎÎñ¾ä±ú */
+/* LED ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
 static TaskHandle_t LED_Task_Handle = NULL;
-/* ListeningSensors ÈÎÎñ¾ä±ú*/
+/* ListeningSensors ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static TaskHandle_t ListeningSensors_Task_Handle = NULL;
-/* lCalcVelocity ÈÎÎñ¾ä±ú*/
+/* lCalcVelocity ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static TaskHandle_t lCalcVelocity_Task_Handle = NULL;
-/* rCalcVelocity ÈÎÎñ¾ä±ú*/
+/* rCalcVelocity ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static TaskHandle_t rCalcVelocity_Task_Handle = NULL;
-/* AnalyseCommand ÈÎÎñ¾ä±ú*/
+/* AnalyseCommand ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static TaskHandle_t AnalyseCommand_Task_Handle = NULL;
-/* Run ÈÎÎñ¾ä±ú*/
+/* Run ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static TaskHandle_t Run_Task_Handle = NULL;
-/* OLEDShowing ÈÎÎñ¾ä±ú*/
+/* OLEDShowing ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static TaskHandle_t OLEDShowing_Task_Handle = NULL;
-/* MetalDetection ÈÎÎñ¾ä±ú*/
+/* MetalDetection ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static TaskHandle_t MetalDetection_Task_Handle = NULL;
-/********************************** ÄÚºË¶ÔÏó¾ä±ú *********************************/
-/*×ó²âËÙ´«¸ÐÆ÷¼ÆÊýÐÅºÅÁ¿¾ä±ú*/
+/********************************** ï¿½ÚºË¶ï¿½ï¿½ï¿½ï¿½ï¿½ *********************************/
+/*ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static SemaphoreHandle_t vSensorLCountHandle = NULL;
-/*ÓÒ²âËÙ´«¸ÐÆ÷¼ÆÊýÐÅºÅÁ¿¾ä±ú*/
+/*ï¿½Ò²ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*/
 static SemaphoreHandle_t vSensorRCountHandle = NULL;
-/*×óÂÖ´ýÐÞÕýËÙ¶ÈÏûÏ¢¶ÓÁÐ¾ä±ú*/
+/*ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½Ð¾ï¿½ï¿½*/
 static QueueHandle_t ReplaceVHandle = NULL;
-/*ÎÞÏß¿ØÖÆÃüÁîÏûÏ¢¶ÓÁÐ¾ä±ú*/
+/*ï¿½ï¿½ï¿½ß¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½Ð¾ï¿½ï¿½*/
 static QueueHandle_t wirelessCommandHandle = NULL;
-/******************************* È«¾Ö±äÁ¿ÉùÃ÷ ************************************/
-/* ¿ÕÏÐÈÎÎñÈÎÎñ¶ÑÕ» */
+/******************************* È«ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ************************************/
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t Idle_Task_Stack[configMINIMAL_STACK_SIZE];
-/* ¶¨Ê±Æ÷ÈÎÎñ¶ÑÕ» */
+/* ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t Timer_Task_Stack[configTIMER_TASK_STACK_DEPTH];
-/* ¿ÕÏÐÈÎÎñ¿ØÖÆ¿é */
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t Idle_Task_TCB;
-/* ¶¨Ê±Æ÷ÈÎÎñ¿ØÖÆ¿é */
+/* ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t Timer_Task_TCB;
 
-/* AppTaskCreate ÈÎÎñ¶ÑÕ» */
+/* AppTaskCreate ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t AppTaskCreate_Stack[128];
-/* LED ÈÎÎñ¶ÑÕ» */
+/* LED ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t LED_Task_Stack[128];
-/* ListeningSensors ÈÎÎñ¶ÑÕ» */
+/* ListeningSensors ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t ListeningSensors_Task_Stack[128];
-/* lCalcVelocity ÈÎÎñ¶ÑÕ» */
+/* lCalcVelocity ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t lCalcVelocity_Task_Stack[128];
-/* rCalcVelocity ÈÎÎñ¶ÑÕ» */
+/* rCalcVelocity ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t rCalcVelocity_Task_Stack[128];
-/* AnalyseCommand ÈÎÎñ¶ÑÕ» */
+/* AnalyseCommand ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t AnalyseCommand_Task_Stack[128];
-/* Run ÈÎÎñ¶ÑÕ» */
+/* Run ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 #define RunStackDeep 256
 static StackType_t Run_Task_Stack[RunStackDeep];
-/* OLEDShowing ÈÎÎñ¶ÑÕ» */
+/* OLEDShowing ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 #define OLEDShowingStackDeep 512
 static StackType_t OLEDShowing_Task_Stack[OLEDShowingStackDeep];
-/* MetalDetection ÈÎÎñ¶ÑÕ» */
+/* MetalDetection ï¿½ï¿½ï¿½ï¿½ï¿½Õ» */
 static StackType_t MetalDetection_Task_Stack[128];
 
-/* AppTaskCreate ÈÎÎñ¿ØÖÆ¿é */
+/* AppTaskCreate ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t AppTaskCreate_TCB;
-/* LED ÈÎÎñ¿ØÖÆ¿é */
+/* LED ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t LED_Task_TCB;
-/* ListeningSensors ÈÎÎñ¿ØÖÆ¿é */
+/* ListeningSensors ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t ListeningSensors_Task_TCB;
-/* lCalcVelocity ÈÎÎñ¿ØÖÆ¿é */
+/* lCalcVelocity ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t lCalcVelocity_Task_TCB;
-/* rCalcVelocity ÈÎÎñ¿ØÖÆ¿é */
+/* rCalcVelocity ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t rCalcVelocity_Task_TCB;
-/* AnalyseCommand ÈÎÎñ¿ØÖÆ¿é */
+/* AnalyseCommand ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t AnalyseCommand_Task_TCB;
-/* Run ÈÎÎñ¿ØÖÆ¿é */
+/* Run ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t Run_Task_TCB;
-/* OLEDShowing ÈÎÎñ¿ØÖÆ¿é */
+/* OLEDShowing ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t OLEDShowing_Task_TCB;
-/* MetalDetection ÈÎÎñ¿ØÖÆ¿é */
+/* MetalDetection ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ */
 static StaticTask_t MetalDetection_Task_TCB;
 
-/* ÐÅºÅÁ¿Êý¾Ý½á¹¹Ö¸Õë */
-static StaticSemaphore_t vSensorLCount_Structure; /*×ó²âËÙ´«¸ÐÆ÷¼ÆÊýÐÅºÅÁ¿*/
-static StaticSemaphore_t vSensorRCount_Structure; /*ÓÒ²âËÙ´«¸ÐÆ÷¼ÆÊýÐÅºÅÁ¿*/
+/* ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹Ö¸ï¿½ï¿½ */
+static StaticSemaphore_t vSensorLCount_Structure; /*ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½*/
+static StaticSemaphore_t vSensorRCount_Structure; /*ï¿½Ò²ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½*/
 
-/* ÏûÏ¢¶ÓÁÐÊý¾Ý½á¹¹Ö¸Õë */
+/* ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹Ö¸ï¿½ï¿½ */
 static StaticQueue_t ReplaceV_Structure;
 static StaticQueue_t wirelessCommand_Structure;
 
-/* ÏûÏ¢¶ÓÁÐµÄ´æ´¢ÇøÓò£¬´óÐ¡ÖÁÉÙÓÐ uxQueueLength * uxItemSize ¸ö×Ö½Ú */
+/* ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ÐµÄ´æ´¢ï¿½ï¿½ï¿½ò£¬´ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ uxQueueLength * uxItemSize ï¿½ï¿½ï¿½Ö½ï¿½ */
 uint8_t ReplaceVStorageArea[REPLACE_V_QUEUE_LENGTH * REPLACE_V_ITEM_SIZE];
 uint8_t wirelessCommandStorageArea[WIRELESSCOMMAND_QUEUE_LENGTH * WIRELESSCOMMAND_ITEM_SIZE];
 
-/* ÆÕÍ¨È«¾Ö±äÁ¿ */
-int lVelocity; // ×óÂÖËÙ¶È(m/s)
-int rVelocity; // ÓÒÂÖËÙ¶È(m/s)
+/* ï¿½ï¿½Í¨È«ï¿½Ö±ï¿½ï¿½ï¿½ */
+int lVelocity; // ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½(m/s)
+int rVelocity; // ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½(m/s)
 
-u8 lPWMVal; // ×óÂÖµ±Ç°PWMÕ¼¿Õ±È
-u8 rPWMVal; // ÓÒÂÖµ±Ç°PWMÕ¼¿Õ±È
+u8 lPWMVal; // ï¿½ï¿½ï¿½Öµï¿½Ç°PWMÕ¼ï¿½Õ±ï¿½
+u8 rPWMVal; // ï¿½ï¿½ï¿½Öµï¿½Ç°PWMÕ¼ï¿½Õ±ï¿½
 
-s8 lTargetV; // Ä¿±ê×óÂÖPWMÕ¼¿Õ±È
-s8 rTargetV; // Ä¿±êÓÒÂÖPWMÕ¼¿Õ±È
+s8 lTargetV; // Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PWMÕ¼ï¿½Õ±ï¿½
+s8 rTargetV; // Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½PWMÕ¼ï¿½Õ±ï¿½
 
-u16 lTime = 0; // ×óÂÖ1Âö³å¼ÆÊ±
-u16 rTime = 0; // ÓÒÂÖ1Âö³å¼ÆÊ±
+u16 lTime = 0; // ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½ï¿½Ê±
+u16 rTime = 0; // ï¿½ï¿½ï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½ï¿½Ê±
 
-u8 carMode = 0; // Ð¡³µÔËÐÐÄ£Ê½ 0-ÊÜZigbeeÐ­µ÷Æ÷¿ØÖÆ 1-ÊÜÑ­¼£ÍâÉè¿ØÖÆ
+u8 carMode = 0; // Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½ 0-ï¿½ï¿½ZigbeeÐ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 1-ï¿½ï¿½Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 u8 exti1WaitTime; // used for exti1 debounce
 
@@ -154,13 +154,13 @@ u8 coinCounter; // coin number counter
 u8 carState     = 0; // means the car`s move state, 0 is along the line, 1 is turn left slowly, 2 is turn left quickly, 3 is turn right slowly, 4 is turn right quickly
 u8 trackingFlag = 0; // Six bit of one byte was used to means the state of car in road. The reflector is 1, the other is 0
 
-u8 v1[2]         = {0x03, 0x64};// Ð¡·ù¶È×ªÍä²îËÙ
-u8 v2[2]         = {0x02, 0x64};// ÖÐ·ù¶È×ªÍä²îËÙ
-u8 v3[2]         = {0x01, 0x64};// ´ó·ù¶È×ªÍä²îËÙ
-u8 v4[2]         = {0x00, 0x00};// Ñ°¼£Òì³£
-u8 pwmerr        = 1;//pwmµ÷ËÙ·ù¶È
-u8 lV            = 0x15; // ÑØÏßÐÐÊ»Ê±×óÂÖÍÆ¼öPWMÕ¼¿Õ±È
-u8 rV            = 0x15; // ÑØÏßÐÐÊ»Ê±ÓÒÂÖÍÆ¼öPWMÕ¼¿Õ±È
+u8 v1[2]         = {0x03, 0x64};// Ð¡ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½
+u8 v2[2]         = {0x02, 0x64};// ï¿½Ð·ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½
+u8 v3[2]         = {0x01, 0x64};// ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½ï¿½
+u8 v4[2]         = {0x00, 0x00};// Ñ°ï¿½ï¿½ï¿½ì³£
+u8 pwmerr        = 1;//pwmï¿½ï¿½ï¿½Ù·ï¿½ï¿½ï¿½
+u8 lV            = 0x15; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê»Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½PWMÕ¼ï¿½Õ±ï¿½
+u8 rV            = 0x15; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê»Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ï¿½PWMÕ¼ï¿½Õ±ï¿½
 
 u8 runRoad = 1;// this variable set 1 means car will along the out line, set 2 this car will along the in line
 u16 CHANGEROADTIME_MAX = 0x3c*10;
@@ -176,16 +176,16 @@ u8 speedUpTimeEF = 0;
 
 u8 keyCD = 0;//the exti3 key 
 
-u16 TIM1CH1_CAPTURE_STA = 0; //ÊäÈë²¶»ñ×´Ì¬ bit15±íÊ¾ÊÇ·ñÍê³ÉÒ»´ÎÂö³å²¶»ñ£¬bit14±íÊ¾ÊÇ·ñÍê³ÉÂö³åµÚÒ»´Î±ä»¯ÑØ£¬bit13~bit0±íÊ¾Âö³å³ÖÐøÊ±¼ä(µ¥Î»ÊÇTIM1CH1_CAPTURE_STA++Óï¾ä´¥·¢ÖÜÆÚ)
+u16 TIM1CH1_CAPTURE_STA = 0; //ï¿½ï¿½ï¿½ë²¶ï¿½ï¿½×´Ì¬ bit15ï¿½ï¿½Ê¾ï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½å²¶ï¿½ï¿½bit14ï¿½ï¿½Ê¾ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Î±ä»¯ï¿½Ø£ï¿½bit13~bit0ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½(ï¿½ï¿½Î»ï¿½ï¿½TIM1CH1_CAPTURE_STA++ï¿½ï¿½ä´¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 float distance = 0;
-u8 distanceWarningFlag = 0;// ¾àÀë¹ý½ü¾¯¸æ±êÖ¾Î», ¹ý½üÊ±ÖÃ1
+u8 distanceWarningFlag = 0;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾Î», ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½1
 
-float followDistance = 25;//¸úËæºÏÀí¾àÀë(25cm)
+float followDistance = 25;//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(25cm)
 
 u8 lightFlag = 0;
 /*
 *************************************************************************
-*                             º¯ÊýÉùÃ÷
+*                             ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 *************************************************************************
 */
 void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
@@ -196,51 +196,51 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
                                     uint32_t *pulTimerTaskStackSize);
 
 float Filter(float newValue, float oldValue, float alpha);
-static void AppTaskCreate(void);                    /* ÓÃÓÚ´´½¨ÈÎÎñ */
-static void LED_Task(void *parameter);              // LEDÈÎÎñ
-static void ListeningSensors_Task(void *parameter); // ¼àÌýÁ½¸ö²âËÙ´«¸ÐÆ÷
-static void lCalcVelocity_Task(void *parameter);    // ¼ÆËã×óÂÖËÙ¶ÈÈÎÎñ
-static void rCalcVelocity_Task(void *parameter);    // ¼ÆËãÓÒÂÖËÙ¶ÈÈÎÎñ
-static void AnalyseCommand_Task(void *parameter);   // ·ÖÎöÃüÁîÈÎÎñ
-static void Run_Task(void *parameter);              // ×ÔÑ²º½ÈÎÎñ
-static void OLEDShowing_Task(void *parameter);      // OLEDÏÔÊ¾ÈÎÎñ
+static void AppTaskCreate(void);                    /* ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
+static void LED_Task(void *parameter);              // LEDï¿½ï¿½ï¿½ï¿½
+static void ListeningSensors_Task(void *parameter); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½
+static void lCalcVelocity_Task(void *parameter);    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½
+static void rCalcVelocity_Task(void *parameter);    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½
+static void AnalyseCommand_Task(void *parameter);   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+static void Run_Task(void *parameter);              // ï¿½ï¿½Ñ²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+static void OLEDShowing_Task(void *parameter);      // OLEDï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½
 static void MetalDetection_Task(void *parameter);   // task of detecting the metal
-static void Setup(void);                            /* ÓÃÓÚ³õÊ¼»¯°åÔØÏà¹Ø×ÊÔ´ */
+static void Setup(void);                            /* ï¿½ï¿½ï¿½Ú³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ */
 
 int main(void)
 {
-    Setup(); // ³õÊ¼»¯
-    /* ´´½¨ AppTaskCreate ÈÎÎñ */
-    AppTaskCreate_Handle = xTaskCreateStatic((TaskFunction_t)AppTaskCreate,       // ÈÎÎñº¯Êý
-                                             (const char *)"AppTaskCreate",       // ÈÎÎñÃû³Æ
-                                             (uint32_t)128,                       // ÈÎÎñ¶ÑÕ»´óÐ¡
-                                             (void *)NULL,                        // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                             (UBaseType_t)3,                      // ÈÎÎñÓÅÏÈ¼¶
-                                             (StackType_t *)AppTaskCreate_Stack,  // ÈÎÎñ¶ÑÕ»
-                                             (StaticTask_t *)&AppTaskCreate_TCB); // ÈÎÎñ¿ØÖÆ¿é
+    Setup(); // ï¿½ï¿½Ê¼ï¿½ï¿½
+    /* ï¿½ï¿½ï¿½ï¿½ AppTaskCreate ï¿½ï¿½ï¿½ï¿½ */
+    AppTaskCreate_Handle = xTaskCreateStatic((TaskFunction_t)AppTaskCreate,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                             (const char *)"AppTaskCreate",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                             (uint32_t)128,                       // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½Ð¡
+                                             (void *)NULL,                        // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                             (UBaseType_t)3,                      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                             (StackType_t *)AppTaskCreate_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                             (StaticTask_t *)&AppTaskCreate_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
 
     if (AppTaskCreate_Handle != NULL) {
-        // ÈÎÎñ´´½¨³É¹¦
-        printf("=====×¼±¸½øÈëFreeRTOS!=====\r\n");
-        vTaskStartScheduler(); /* ¿ªÆôµ÷¶ÈÆ÷ */
+        // ï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½
+        printf("=====×¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½FreeRTOS!=====\r\n");
+        vTaskStartScheduler(); /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
     }
     while (1);
 }
 
 /**
- * @brief    °åÔØÍâÉè³õÊ¼»¯
+ * @brief    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
  * @param    void
  * @retval   void
  */
 static void Setup(void)
 {
-    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4); // 4bit¶¼ÓÃÓÚÉèÖÃÇÀÕ¼ÓÅÏÈ¼¶
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4); // 4bitï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½È¼ï¿½
     MTS_Init();
     LED_Init();
     BEEP_Init();
     USART1_Init(115200);
     USART2_Init(115200);
-//    TIM2_Int_Init(10 - 1, 7200 - 1); // ¶¨Ê±Æ÷Ê±ÖÓ72M£¬·ÖÆµÏµÊý7200£¬ËùÒÔ72M/7200=10KhzµÄ¼ÆÊýÆµÂÊ£¬¼ÆÊý10´ÎÎª1ms
+//    TIM2_Int_Init(10 - 1, 7200 - 1); // ï¿½ï¿½Ê±ï¿½ï¿½Ê±ï¿½ï¿½72Mï¿½ï¿½ï¿½ï¿½ÆµÏµï¿½ï¿½7200ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½72M/7200=10Khzï¿½Ä¼ï¿½ï¿½ï¿½Æµï¿½Ê£ï¿½ï¿½ï¿½ï¿½ï¿½10ï¿½ï¿½Îª1ms
     vSensors_Init();
     dSensors_Init();
     Metal_Detection_Init();
@@ -251,155 +251,155 @@ static void Setup(void)
 
 static void AppTaskCreate(void)
 {
-    taskENTER_CRITICAL(); // ½øÈëÁÙ½çÇø
+    taskENTER_CRITICAL(); // ï¿½ï¿½ï¿½ï¿½ï¿½Ù½ï¿½ï¿½ï¿½
 
-    // ¼ÇÂ¼×ó³µÂÖ¹âµç²âËÙ´«¸ÐÆ÷»ñÈ¡µÄÂö³å
-    vSensorLCountHandle = xSemaphoreCreateCountingStatic(vSensorCountMax,           // ×î´ó¼ÆÊýÖµ
-                                                         0,                         // ³õÊ¼¼ÆÊýÖµ
-                                                         &vSensorLCount_Structure); // ÐÅºÅÁ¿µÄÊý¾Ý½á¹¹Ìå
-    if (vSensorLCountHandle != NULL)                                                /* ´´½¨³É¹¦ */
-        printf("vSensorLCount ¼ÆÊýÐÅºÅÁ¿´´½¨³É¹¦!\r\n");
+    // ï¿½ï¿½Â¼ï¿½ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    vSensorLCountHandle = xSemaphoreCreateCountingStatic(vSensorCountMax,           // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+                                                         0,                         // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Öµ
+                                                         &vSensorLCount_Structure); // ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½
+    if (vSensorLCountHandle != NULL)                                                /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("vSensorLCount ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("vSensorLCount ¼ÆÊýÐÅºÅÁ¿´´½¨Ê§°Ü!\r\n");
+        printf("vSensorLCount ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    // ¼ÇÂ¼ÓÒ³µÂÖ¹âµç²âËÙ´«¸ÐÆ÷»ñÈ¡µÄÂö³å
-    vSensorRCountHandle = xSemaphoreCreateCountingStatic(vSensorCountMax,           // ×î´ó¼ÆÊýÖµ
-                                                         0,                         // ³õÊ¼¼ÆÊýÖµ
-                                                         &vSensorRCount_Structure); // ÐÅºÅÁ¿µÄÊý¾Ý½á¹¹Ìå
-    if (vSensorRCountHandle != NULL)                                                /* ´´½¨³É¹¦ */
-        printf("vSensorRCount ¼ÆÊýÐÅºÅÁ¿´´½¨³É¹¦!\r\n");
+    // ï¿½ï¿½Â¼ï¿½Ò³ï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    vSensorRCountHandle = xSemaphoreCreateCountingStatic(vSensorCountMax,           // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+                                                         0,                         // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Öµ
+                                                         &vSensorRCount_Structure); // ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½
+    if (vSensorRCountHandle != NULL)                                                /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("vSensorRCount ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("vSensorRCount ¼ÆÊýÐÅºÅÁ¿´´½¨Ê§°Ü!\r\n");
+        printf("vSensorRCount ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    // ´æ´¢³µÂÖ´ýÐÞÕý³µËÙÖµ
-    ReplaceVHandle = xQueueCreateStatic(REPLACE_V_QUEUE_LENGTH, // ¶ÓÁÐÉî¶È
-                                        REPLACE_V_ITEM_SIZE,    // ¶ÓÁÐÊý¾Ýµ¥ÔªµÄµ¥Î»
-                                        ReplaceVStorageArea,    // ¶ÓÁÐµÄ´æ´¢ÇøÓò
-                                        &ReplaceV_Structure     // ¶ÓÁÐµÄÊý¾Ý½á¹¹
+    // ï¿½æ´¢ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+    ReplaceVHandle = xQueueCreateStatic(REPLACE_V_QUEUE_LENGTH, // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                        REPLACE_V_ITEM_SIZE,    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½Ôªï¿½Äµï¿½Î»
+                                        ReplaceVStorageArea,    // ï¿½ï¿½ï¿½ÐµÄ´æ´¢ï¿½ï¿½ï¿½ï¿½
+                                        &ReplaceV_Structure     // ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½Ý½á¹¹
     );
-    if (ReplaceVHandle != NULL) /* ´´½¨³É¹¦ */
-        printf("ReplaceV¶ÓÁÐ´´½¨³É¹¦!\r\n");
+    if (ReplaceVHandle != NULL) /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("ReplaceVï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("ReplaceV¶ÓÁÐ´´½¨Ê§°Ü!\r\n");
+        printf("ReplaceVï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    // ´æ´¢¿ØÖÆÃüÁî
-    wirelessCommandHandle = xQueueCreateStatic(WIRELESSCOMMAND_QUEUE_LENGTH, // ¶ÓÁÐÉî¶È
-                                               WIRELESSCOMMAND_ITEM_SIZE,    // ¶ÓÁÐÊý¾Ýµ¥ÔªµÄµ¥Î»
-                                               wirelessCommandStorageArea,   // ¶ÓÁÐµÄ´æ´¢ÇøÓò
-                                               &wirelessCommand_Structure    // ¶ÓÁÐµÄÊý¾Ý½á¹¹
+    // ï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    wirelessCommandHandle = xQueueCreateStatic(WIRELESSCOMMAND_QUEUE_LENGTH, // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                               WIRELESSCOMMAND_ITEM_SIZE,    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½Ôªï¿½Äµï¿½Î»
+                                               wirelessCommandStorageArea,   // ï¿½ï¿½ï¿½ÐµÄ´æ´¢ï¿½ï¿½ï¿½ï¿½
+                                               &wirelessCommand_Structure    // ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½Ý½á¹¹
     );
-    if (wirelessCommandHandle != NULL) /* ´´½¨³É¹¦ */
-        printf("wirelessCommand¶ÓÁÐ´´½¨³É¹¦!\r\n");
+    if (wirelessCommandHandle != NULL) /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("wirelessCommandï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("wirelessCommand¶ÓÁÐ´´½¨Ê§°Ü!\r\n");
+        printf("wirelessCommandï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    /* ´´½¨LED_TaskÈÎÎñ */
-    LED_Task_Handle = xTaskCreateStatic((TaskFunction_t)LED_Task,       // ÈÎÎñº¯Êý
-                                        (const char *)"LED_Task",       // ÈÎÎñÃû³Æ
-                                        (uint32_t)128,                  // ÈÎÎñÕ»Éî
-                                        (void *)NULL,                   // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                        (UBaseType_t)4,                 // ÈÎÎñÓÅÏÈ¼¶
-                                        (StackType_t *)LED_Task_Stack,  // ÈÎÎñ¶ÑÕ»
-                                        (StaticTask_t *)&LED_Task_TCB); // ÈÎÎñ¿ØÖÆ¿é
-    if (LED_Task_Handle != NULL)                                        /* ´´½¨³É¹¦ */
-        printf("LED_TaskÈÎÎñ´´½¨³É¹¦!\r\n");
+    /* ï¿½ï¿½ï¿½ï¿½LED_Taskï¿½ï¿½ï¿½ï¿½ */
+    LED_Task_Handle = xTaskCreateStatic((TaskFunction_t)LED_Task,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                        (const char *)"LED_Task",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                        (uint32_t)128,                  // ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½
+                                        (void *)NULL,                   // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                        (UBaseType_t)4,                 // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                        (StackType_t *)LED_Task_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                        (StaticTask_t *)&LED_Task_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
+    if (LED_Task_Handle != NULL)                                        /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("LED_Taskï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("LED_TaskÈÎÎñ´´½¨Ê§°Ü!\r\n");
+        printf("LED_Taskï¿½ï¿½ï¿½ñ´´½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    /* ´´½¨ ListeningSensors_Task ÈÎÎñ */
-    ListeningSensors_Task_Handle = xTaskCreateStatic((TaskFunction_t)ListeningSensors_Task,       // ÈÎÎñº¯Êý
-                                                     (const char *)"ListeningSensors_Task",       // ÈÎÎñÃû³Æ
-                                                     (uint32_t)128,                               // ÈÎÎñÕ»Éî
-                                                     (void *)NULL,                                // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                                     (UBaseType_t)4,                              // ÈÎÎñÓÅÏÈ¼¶
-                                                     (StackType_t *)ListeningSensors_Task_Stack,  // ÈÎÎñ¶ÑÕ»
-                                                     (StaticTask_t *)&ListeningSensors_Task_TCB); // ÈÎÎñ¿ØÖÆ¿é
-    if (ListeningSensors_Task_Handle != NULL)                                                     /* ´´½¨³É¹¦ */
-        printf("ListeningSensors_TaskÈÎÎñ´´½¨³É¹¦!\r\n");
+    /* ï¿½ï¿½ï¿½ï¿½ ListeningSensors_Task ï¿½ï¿½ï¿½ï¿½ */
+    ListeningSensors_Task_Handle = xTaskCreateStatic((TaskFunction_t)ListeningSensors_Task,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                     (const char *)"ListeningSensors_Task",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                     (uint32_t)128,                               // ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½
+                                                     (void *)NULL,                                // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                                     (UBaseType_t)4,                              // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                                     (StackType_t *)ListeningSensors_Task_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                                     (StaticTask_t *)&ListeningSensors_Task_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
+    if (ListeningSensors_Task_Handle != NULL)                                                     /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("ListeningSensors_Taskï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("ListeningSensors_TaskÈÎÎñ´´½¨Ê§°Ü!\r\n");
+        printf("ListeningSensors_Taskï¿½ï¿½ï¿½ñ´´½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    /* ´´½¨ lCalcVelocity_Task ÈÎÎñ */
-    lCalcVelocity_Task_Handle = xTaskCreateStatic((TaskFunction_t)lCalcVelocity_Task,       // ÈÎÎñº¯Êý
-                                                  (const char *)"lCalcVelocity_Task",       // ÈÎÎñÃû³Æ
-                                                  (uint32_t)128,                            // ÈÎÎñÕ»Éî
-                                                  (void *)NULL,                             // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                                  (UBaseType_t)4,                           // ÈÎÎñÓÅÏÈ¼¶
-                                                  (StackType_t *)lCalcVelocity_Task_Stack,  // ÈÎÎñ¶ÑÕ»
-                                                  (StaticTask_t *)&lCalcVelocity_Task_TCB); // ÈÎÎñ¿ØÖÆ¿é
-    if (lCalcVelocity_Task_Handle != NULL)                                                  /* ´´½¨³É¹¦ */
-        printf("lCalcVelocity_TaskÈÎÎñ´´½¨³É¹¦!\r\n");
+    /* ï¿½ï¿½ï¿½ï¿½ lCalcVelocity_Task ï¿½ï¿½ï¿½ï¿½ */
+    lCalcVelocity_Task_Handle = xTaskCreateStatic((TaskFunction_t)lCalcVelocity_Task,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                  (const char *)"lCalcVelocity_Task",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                  (uint32_t)128,                            // ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½
+                                                  (void *)NULL,                             // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                                  (UBaseType_t)4,                           // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                                  (StackType_t *)lCalcVelocity_Task_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                                  (StaticTask_t *)&lCalcVelocity_Task_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
+    if (lCalcVelocity_Task_Handle != NULL)                                                  /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("lCalcVelocity_Taskï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("lCalcVelocity_TaskÈÎÎñ´´½¨Ê§°Ü!\r\n");
+        printf("lCalcVelocity_Taskï¿½ï¿½ï¿½ñ´´½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    /* ´´½¨ rCalcVelocity_Task ÈÎÎñ */
-    rCalcVelocity_Task_Handle = xTaskCreateStatic((TaskFunction_t)rCalcVelocity_Task,       // ÈÎÎñº¯Êý
-                                                  (const char *)"rCalcVelocity_Task",       // ÈÎÎñÃû³Æ
-                                                  (uint32_t)128,                            // ÈÎÎñÕ»Éî
-                                                  (void *)NULL,                             // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                                  (UBaseType_t)4,                           // ÈÎÎñÓÅÏÈ¼¶
-                                                  (StackType_t *)rCalcVelocity_Task_Stack,  // ÈÎÎñ¶ÑÕ»
-                                                  (StaticTask_t *)&rCalcVelocity_Task_TCB); // ÈÎÎñ¿ØÖÆ¿é
-    if (rCalcVelocity_Task_Handle != NULL)                                                  /* ´´½¨³É¹¦ */
-        printf("rCalcVelocity_TaskÈÎÎñ´´½¨³É¹¦!\r\n");
+    /* ï¿½ï¿½ï¿½ï¿½ rCalcVelocity_Task ï¿½ï¿½ï¿½ï¿½ */
+    rCalcVelocity_Task_Handle = xTaskCreateStatic((TaskFunction_t)rCalcVelocity_Task,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                  (const char *)"rCalcVelocity_Task",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                  (uint32_t)128,                            // ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½
+                                                  (void *)NULL,                             // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                                  (UBaseType_t)4,                           // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                                  (StackType_t *)rCalcVelocity_Task_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                                  (StaticTask_t *)&rCalcVelocity_Task_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
+    if (rCalcVelocity_Task_Handle != NULL)                                                  /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("rCalcVelocity_Taskï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("rCalcVelocity_TaskÈÎÎñ´´½¨Ê§°Ü!\r\n");
+        printf("rCalcVelocity_Taskï¿½ï¿½ï¿½ñ´´½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    /* ´´½¨ AnalyseCommand_Task ÈÎÎñ */
-    AnalyseCommand_Task_Handle = xTaskCreateStatic((TaskFunction_t)AnalyseCommand_Task,       // ÈÎÎñº¯Êý
-                                                   (const char *)"AnalyseCommand_Task",       // ÈÎÎñÃû³Æ
-                                                   (uint32_t)128,                             // ÈÎÎñÕ»Éî
-                                                   (void *)NULL,                              // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                                   (UBaseType_t)4,                            // ÈÎÎñÓÅÏÈ¼¶
-                                                   (StackType_t *)AnalyseCommand_Task_Stack,  // ÈÎÎñ¶ÑÕ»
-                                                   (StaticTask_t *)&AnalyseCommand_Task_TCB); // ÈÎÎñ¿ØÖÆ¿é
-    if (AnalyseCommand_Task_Handle != NULL)                                                   /* ´´½¨³É¹¦ */
-        printf("AnalyseCommandÈÎÎñ´´½¨³É¹¦!\r\n");
+    /* ï¿½ï¿½ï¿½ï¿½ AnalyseCommand_Task ï¿½ï¿½ï¿½ï¿½ */
+    AnalyseCommand_Task_Handle = xTaskCreateStatic((TaskFunction_t)AnalyseCommand_Task,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                   (const char *)"AnalyseCommand_Task",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                   (uint32_t)128,                             // ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½
+                                                   (void *)NULL,                              // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                                   (UBaseType_t)4,                            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                                   (StackType_t *)AnalyseCommand_Task_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                                   (StaticTask_t *)&AnalyseCommand_Task_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
+    if (AnalyseCommand_Task_Handle != NULL)                                                   /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("AnalyseCommandï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("AnalyseCommandÈÎÎñ´´½¨Ê§°Ü!\r\n");
+        printf("AnalyseCommandï¿½ï¿½ï¿½ñ´´½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    /* ´´½¨ Run_Task ÈÎÎñ */
-    Run_Task_Handle = xTaskCreateStatic((TaskFunction_t)Run_Task,       // ÈÎÎñº¯Êý
-                                        (const char *)"Run_Task",       // ÈÎÎñÃû³Æ
-                                        (uint32_t)RunStackDeep,         // ÈÎÎñÕ»Éî
-                                        (void *)NULL,                   // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                        (UBaseType_t)4,                 // ÈÎÎñÓÅÏÈ¼¶
-                                        (StackType_t *)Run_Task_Stack,  // ÈÎÎñ¶ÑÕ»
-                                        (StaticTask_t *)&Run_Task_TCB); // ÈÎÎñ¿ØÖÆ¿é
-    if (Run_Task_Handle != NULL)                                        /* ´´½¨³É¹¦ */
-        printf("RunÈÎÎñ´´½¨³É¹¦!\r\n");
+    /* ï¿½ï¿½ï¿½ï¿½ Run_Task ï¿½ï¿½ï¿½ï¿½ */
+    Run_Task_Handle = xTaskCreateStatic((TaskFunction_t)Run_Task,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                        (const char *)"Run_Task",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                        (uint32_t)RunStackDeep,         // ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½
+                                        (void *)NULL,                   // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                        (UBaseType_t)4,                 // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                        (StackType_t *)Run_Task_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                        (StaticTask_t *)&Run_Task_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
+    if (Run_Task_Handle != NULL)                                        /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("Runï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("RunÈÎÎñ´´½¨Ê§°Ü!\r\n");
+        printf("Runï¿½ï¿½ï¿½ñ´´½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    /* ´´½¨ OLEDShowing_Task ÈÎÎñ */
-    OLEDShowing_Task_Handle = xTaskCreateStatic((TaskFunction_t)OLEDShowing_Task,       // ÈÎÎñº¯Êý
-                                                (const char *)"OLEDShowing_Task",       // ÈÎÎñÃû³Æ
-                                                (uint32_t)OLEDShowingStackDeep,         // ÈÎÎñÕ»Éî
-                                                (void *)NULL,                           // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                                (UBaseType_t)4,                         // ÈÎÎñÓÅÏÈ¼¶
-                                                (StackType_t *)OLEDShowing_Task_Stack,  // ÈÎÎñ¶ÑÕ»
-                                                (StaticTask_t *)&OLEDShowing_Task_TCB); // ÈÎÎñ¿ØÖÆ¿é
-    if (OLEDShowing_Task_Handle != NULL)                                                /* ´´½¨³É¹¦ */
-        printf("OLEDShowingÈÎÎñ´´½¨³É¹¦!\r\n");
+    /* ï¿½ï¿½ï¿½ï¿½ OLEDShowing_Task ï¿½ï¿½ï¿½ï¿½ */
+    OLEDShowing_Task_Handle = xTaskCreateStatic((TaskFunction_t)OLEDShowing_Task,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                (const char *)"OLEDShowing_Task",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                (uint32_t)OLEDShowingStackDeep,         // ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½
+                                                (void *)NULL,                           // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                                (UBaseType_t)4,                         // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                                (StackType_t *)OLEDShowing_Task_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                                (StaticTask_t *)&OLEDShowing_Task_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
+    if (OLEDShowing_Task_Handle != NULL)                                                /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("OLEDShowingï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("OLEDShowingÈÎÎñ´´½¨Ê§°Ü!\r\n");
+        printf("OLEDShowingï¿½ï¿½ï¿½ñ´´½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    /* ´´½¨ MetalDetection_Task ÈÎÎñ */
-    MetalDetection_Task_Handle = xTaskCreateStatic((TaskFunction_t)MetalDetection_Task,       // ÈÎÎñº¯Êý
-                                                   (const char *)"MetalDetection_Task",       // ÈÎÎñÃû³Æ
-                                                   (uint32_t)128,                             // ÈÎÎñÕ»Éî
-                                                   (void *)NULL,                              // ´«µÝ¸øÈÎÎñº¯ÊýµÄ²ÎÊý
-                                                   (UBaseType_t)4,                            // ÈÎÎñÓÅÏÈ¼¶
-                                                   (StackType_t *)MetalDetection_Task_Stack,  // ÈÎÎñ¶ÑÕ»
-                                                   (StaticTask_t *)&MetalDetection_Task_TCB); // ÈÎÎñ¿ØÖÆ¿é
-    if (MetalDetection_Task_Handle != NULL)                                                   /* ´´½¨³É¹¦ */
-        printf("MetalDetectionÈÎÎñ´´½¨³É¹¦!\r\n");
+    /* ï¿½ï¿½ï¿½ï¿½ MetalDetection_Task ï¿½ï¿½ï¿½ï¿½ */
+    MetalDetection_Task_Handle = xTaskCreateStatic((TaskFunction_t)MetalDetection_Task,       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                   (const char *)"MetalDetection_Task",       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+                                                   (uint32_t)128,                             // ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½
+                                                   (void *)NULL,                              // ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
+                                                   (UBaseType_t)4,                            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½
+                                                   (StackType_t *)MetalDetection_Task_Stack,  // ï¿½ï¿½ï¿½ï¿½ï¿½Õ»
+                                                   (StaticTask_t *)&MetalDetection_Task_TCB); // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½
+    if (MetalDetection_Task_Handle != NULL)                                                   /* ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ */
+        printf("MetalDetectionï¿½ï¿½ï¿½ñ´´½ï¿½ï¿½É¹ï¿½!\r\n");
     else
-        printf("MetalDetectionÈÎÎñ´´½¨Ê§°Ü!\r\n");
+        printf("MetalDetectionï¿½ï¿½ï¿½ñ´´½ï¿½Ê§ï¿½ï¿½!\r\n");
 
-    vTaskDelete(AppTaskCreate_Handle); // É¾³ýAppTaskCreateÈÎÎñ
-    printf("======½øÈëFreeRTOS!======\r\n");
-    taskEXIT_CRITICAL(); // ÍË³öÁÙ½çÇø
+    vTaskDelete(AppTaskCreate_Handle); // É¾ï¿½ï¿½AppTaskCreateï¿½ï¿½ï¿½ï¿½
+    printf("======ï¿½ï¿½ï¿½ï¿½FreeRTOS!======\r\n");
+    taskEXIT_CRITICAL(); // ï¿½Ë³ï¿½ï¿½Ù½ï¿½ï¿½ï¿½
 }
 
 /**
@@ -410,14 +410,14 @@ static void MetalDetection_Task(void *parameter)
     // while(1);
     while (1) {
         if (carMode == 1 && 1 == GPIO_ReadInputDataBit(METAL_DET_GPIO, METAL_DET_Pin)) {
-            //×ÔÑ²º½Ä£Ê½Ê±Ê¶±ðÓ²±Ò
+            //ï¿½ï¿½Ñ²ï¿½ï¿½Ä£Ê½Ê±Ê¶ï¿½ï¿½Ó²ï¿½ï¿½
             MTLEN(TIM3, 0);
             MTREN(TIM3, 0);
             coinCounter++;
-            // ¹ÒÆðÈÎÎñ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             vTaskSuspend(Run_Task_Handle);
             metalDiscoveryFlag = 1;
-            // ÏìÁ½Ãë·äÃùÆ÷
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             BEEP = 1;
             vTaskDelay(100);
             BEEP = 0;
@@ -434,7 +434,7 @@ static void MetalDetection_Task(void *parameter)
             vTaskDelay(100);
             BEEP = 0;
             metalDiscoveryFlag = 0;
-            // ½â¹ÒÈÎÎñ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             vTaskResume(Run_Task_Handle);
             while (1 == GPIO_ReadInputDataBit(METAL_DET_GPIO, METAL_DET_Pin));
         }
@@ -443,15 +443,15 @@ static void MetalDetection_Task(void *parameter)
 
 /**
 
-  * @brief OLEDÏÔÊ¾ÈÎÎñÖ÷Ìå
+  * @brief OLEDï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   * @brief
   * @param
   * @retval
   */
 static void OLEDShowing_Task(void *parameter)
 {
-    char str[128] = {0}; // ÐèÒªÏÔÊ¾µÄ×Ö·û´®ÁÙÊ±´æ·Å´¦
-    // ³õÊ¼»¯u8g2
+    char str[128] = {0}; // ï¿½ï¿½Òªï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Å´ï¿½
+    // ï¿½ï¿½Ê¼ï¿½ï¿½u8g2
     u8g2_t u8g2; // a structure which will contain all the data for one display
     u8g2_Setup_ssd1306_i2c_128x64_noname_f(&u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay);
     u8g2_InitDisplay(&u8g2);     // send init sequence to the display, display is in sleep mode after this
@@ -463,50 +463,50 @@ static void OLEDShowing_Task(void *parameter)
         u8g2_ClearBuffer(&u8g2); // clear the u8g2 buffer
         if (metalDiscoveryFlag == 0 && distanceWarningFlag == 0) {
             v = (lVelocity + rVelocity) / 2;
-            u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t); // Í¼±ê´óÈ«
-            u8g2_DrawGlyph(&u8g2, 82, 20, 0x0047);           // Ó²±ÒÊýÁ¿ÏÔÊ¾Í¼±ê
-            u8g2_DrawGlyph(&u8g2, 0, 63, 0x029E);            // Ð¡µçÂ¿Í¼±ê
-            u8g2_DrawGlyph(&u8g2, 0, 21, 0x0158);            // Ãë±íÍ¼±ê
-            u8g2_DrawGlyph(&u8g2, 0, 42, 0x0661);            // ²â¾àÍ¼±ê
+            u8g2_SetFont(&u8g2, u8g2_font_streamline_all_t); // Í¼ï¿½ï¿½ï¿½È«
+            u8g2_DrawGlyph(&u8g2, 82, 20, 0x0047);           // Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾Í¼ï¿½ï¿½
+            u8g2_DrawGlyph(&u8g2, 0, 63, 0x029E);            // Ð¡ï¿½ï¿½Â¿Í¼ï¿½ï¿½
+            u8g2_DrawGlyph(&u8g2, 0, 21, 0x0158);            // ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
+            u8g2_DrawGlyph(&u8g2, 0, 42, 0x0661);            // ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
 
-            u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf); // 9ÏñËØµã¸ß×Ö·û¿â
-            u8g2_DrawStr(&u8g2, 21, 59, ":");        // Ð¡µçÂ¿ºóÃ°ºÅ£¬±íÊ¾ËÙ¶È
-            u8g2_DrawStr(&u8g2, 103, 15, ":");       // Ó²±ÒÍ¼±êºóÃ°ºÅ£¬±íÊ¾Ó²±ÒÊýÁ¿
-            u8g2_DrawStr(&u8g2, 21, 38, ":");       // ²â¾àÍ¼±êºóÃ°ºÅ£¬±íÊ¾¾àÀë
+            u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf); // 9ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½
+            u8g2_DrawStr(&u8g2, 21, 59, ":");        // Ð¡ï¿½ï¿½Â¿ï¿½ï¿½Ã°ï¿½Å£ï¿½ï¿½ï¿½Ê¾ï¿½Ù¶ï¿½
+            u8g2_DrawStr(&u8g2, 103, 15, ":");       // Ó²ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ã°ï¿½Å£ï¿½ï¿½ï¿½Ê¾Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            u8g2_DrawStr(&u8g2, 21, 38, ":");       // ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ã°ï¿½Å£ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½
 			
             sprintf(str, "0.%dm/s", v);
-            u8g2_DrawStr(&u8g2, 32, 59, str); // Ð¡³µÊµ¼ÊËÙ¶È
+            u8g2_DrawStr(&u8g2, 32, 59, str); // Ð¡ï¿½ï¿½Êµï¿½ï¿½ï¿½Ù¶ï¿½
 			
             sprintf(str, "%d", coinCounter);
-            u8g2_DrawStr(&u8g2, 114, 15, str); // Ó²±ÒÊµ¼ÊÊýÁ¿
+            u8g2_DrawStr(&u8g2, 114, 15, str); // Ó²ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			
 			secondTime = runTime/1000;
 			milliSecondTime = (runTime % 1000) /10;
             sprintf(str, "%d:%d", secondTime, milliSecondTime);
-            u8g2_DrawStr(&u8g2, 24, 17, str); // Ð¡³µÅÜµÄÊ±¼ä
+            u8g2_DrawStr(&u8g2, 24, 17, str); // Ð¡ï¿½ï¿½ï¿½Üµï¿½Ê±ï¿½ï¿½
 			
             sprintf(str, "%.1f", distance);
-            u8g2_DrawStr(&u8g2, 32, 38, str); // ¾àÀë
+            u8g2_DrawStr(&u8g2, 32, 38, str); // ï¿½ï¿½ï¿½ï¿½
         } else {
-            u8g2_SetFont(&u8g2, u8g2_font_emoticons21_tr); // ±íÇé´óÈ«
-            u8g2_DrawGlyphX2(&u8g2, 40, 50, 0x0030);       // ¼ì²âµ½Ó²±ÒÏÔÊ¾±íÇé
+            u8g2_SetFont(&u8g2, u8g2_font_emoticons21_tr); // ï¿½ï¿½ï¿½ï¿½ï¿½È«
+            u8g2_DrawGlyphX2(&u8g2, 40, 50, 0x0030);       // ï¿½ï¿½âµ½Ó²ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½
         }
-        u8g2_SendBuffer(&u8g2); // Í¬²½ÆÁÄ»
+        u8g2_SendBuffer(&u8g2); // Í¬ï¿½ï¿½ï¿½ï¿½Ä»
     }
 }
 
 /**
-  * @brief Run ÈÎÎñÖ÷Ìå
+  * @brief Run ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   */
 
 static void Run_Task(void *parameter)
 {
-    u16 GPIO_Pins[6] = {GPIO_Pin_10, GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_13, GPIO_Pin_14, GPIO_Pin_15}; // ºìÍâÄ£¿éÒý½Å
+    u16 GPIO_Pins[6] = {GPIO_Pin_10, GPIO_Pin_11, GPIO_Pin_12, GPIO_Pin_13, GPIO_Pin_14, GPIO_Pin_15}; // ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     u8 i;
-    s8 turningTrend = 0;//×ªÏòÇ÷ÊÆ£¬ÓÃÓÚ¸úËæÄ£Ê½£¬
-                        //Èç¹ûÅÐ¶ÏÎïÌåÔÚ×ÔÉí×ó²à£¬Ôò¸³ÖµÎª-1£»
-                        //Èç¹ûÔÚÇ°·½£¬ÔòÎª0£»
-                        //Èç¹ûÔÚÓÒ²à£¬ÔòÎª1£»
+    s8 turningTrend = 0;//×ªï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½Ú¸ï¿½ï¿½ï¿½Ä£Ê½ï¿½ï¿½
+                        //ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½à£¬ï¿½ï¿½ÖµÎª-1ï¿½ï¿½
+                        //ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª0ï¿½ï¿½
+                        //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò²à£¬ï¿½ï¿½Îª1ï¿½ï¿½
 	PID* car_pid_position = PID_Position_Create(3,0.001,500,100,50000);
     while (1) {
         // Base on the mode of the car to do thing
@@ -565,7 +565,7 @@ static void Run_Task(void *parameter)
 					lTargetV = v3[1];
 				} 
 				else {
-					// ´¦ÓÚ²»Õý³£×´Ì¬£¬speed down
+					// ï¿½ï¿½ï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬ï¿½ï¿½speed down
 					lTargetV = v4[0];
 					rTargetV = v4[1];
 					runTimeEF = 0;
@@ -574,7 +574,7 @@ static void Run_Task(void *parameter)
         }
 		else if(carMode == 0){
             // if mode is 0, means the car was in manual control mode
-            //µ±¾àÀë¹ý½ü
+            //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             if(distanceWarningFlag == 1){
 				BEEP = 1;
                 MTLEN(TIM3, 0);
@@ -620,7 +620,7 @@ static void Run_Task(void *parameter)
             else if(distanceWarningFlag == 0){
 				BEEP = 0;
                 if(turningTrend == 0){
-                    //Èç¹ûÅÐ¶ÏÎïÌåÔÚÇ°·½
+                    //ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½
 					if(distance - followDistance < 1 && distance - followDistance > -1)
 						lTargetV = 0;
                     else
@@ -641,13 +641,13 @@ static void Run_Task(void *parameter)
 		MTLEN(TIM3, lTargetV);
 		MTREN(TIM3, rTargetV);
         //Output the real time velocity
-//        printf("×óÂÖËÙ¶ÈÎª:0.%dm/s  ÓÒÂÖËÙ¶ÈÎª:0.%dm/s  ×óÂÖ´ýÌæ»»PWMValÎª:0.%dm/s  ÓÒÂÖ´ýÌæ»»PWMValÎª:0.%dm/s\r\n", lVelocity, rVelocity, lTargetV, rTargetV);
+//        printf("ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½Îª:0.%dm/s  ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½Îª:0.%dm/s  ï¿½ï¿½ï¿½Ö´ï¿½ï¿½æ»»PWMValÎª:0.%dm/s  ï¿½ï¿½ï¿½Ö´ï¿½ï¿½æ»»PWMValÎª:0.%dm/s\r\n", lVelocity, rVelocity, lTargetV, rTargetV);
 
     }
 }
 
 /**
- * @brief    ·ÖÎö¿ØÖÆÃüÁîÈÎÎñÖ÷Ìå
+ * @brief    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 static void AnalyseCommand_Task(void *parameter)
 {
@@ -660,40 +660,40 @@ static void AnalyseCommand_Task(void *parameter)
 
         if (commands[0] == 0x00) {
 			lightFlag = 0;
-            runTimeEF = 0;//Í£Ö¹¼ÆÊ±
+            runTimeEF = 0;//Í£Ö¹ï¿½ï¿½Ê±
             lTargetV = 0;
             rTargetV = 0;
-            carMode  = 0; // ÊÖ¶¯µ²
-            // ÓÐ¿ÕÁË×¢ÊÍÏÂÃæÁ½ÐÐ¿´¿´Í£³µ¼°²»¼°Ê±
+            carMode  = 0; // ï¿½Ö¶ï¿½ï¿½ï¿½
+            // ï¿½Ð¿ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¿ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±
             MTLEN(TIM3, 0);
             MTREN(TIM3, 0);
-            printf("Í£³µ~\r\n");
+            printf("Í£ï¿½ï¿½~\r\n");
         }
 		else if (commands[0] == 0x01) {
 			lightFlag = 0;
             Go();
-			runTimeEF = 1;//¿ªÊ¼¼ÆÊ±
-            carMode = 1;//×Ô¶¯µ²
-            printf("¿ª³µ£¡×ÔÑ²º½Ä£Ê½\r\n");
+			runTimeEF = 1;//ï¿½ï¿½Ê¼ï¿½ï¿½Ê±
+            carMode = 1;//ï¿½Ô¶ï¿½ï¿½ï¿½
+            printf("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ²ï¿½ï¿½Ä£Ê½\r\n");
         }
 		else if (commands[0] == 0x02) {
 			lightFlag = 1;
-			//×ó×ª
-            carMode = 0;//ÊÖ¶¯µ²
+			//ï¿½ï¿½×ª
+            carMode = 0;//ï¿½Ö¶ï¿½ï¿½ï¿½
             lTargetV = v2[0];
             rTargetV = v2[1];
         }
 		else if (commands[0] == 0x03) {
 			lightFlag = 1;
-			//ÓÒ×ª
-            carMode = 0;//ÊÖ¶¯µ²
+			//ï¿½ï¿½×ª
+            carMode = 0;//ï¿½Ö¶ï¿½ï¿½ï¿½
             lTargetV = v2[1];
             rTargetV = v2[0];
         } 
 		else if (commands[0] == 0x04) {
 			lightFlag = 1;
-            //µ¹³µ
-			carMode = 0;//ÊÖ¶¯µ²
+            //ï¿½ï¿½ï¿½ï¿½
+			carMode = 0;//ï¿½Ö¶ï¿½ï¿½ï¿½
 			Back();
             lTargetV = lV;
             rTargetV = rV;
@@ -735,12 +735,12 @@ static void AnalyseCommand_Task(void *parameter)
         } 
 		else if (commands[0] == 0x08) {
 			lightFlag = 0;
-            //ÏÈÍ£ÏÂ²¢ÇÐ»»ÎªÖ±ÐÐÄ£Ê½
+            //ï¿½ï¿½Í£ï¿½Â²ï¿½ï¿½Ð»ï¿½ÎªÖ±ï¿½ï¿½Ä£Ê½
 			Go();
-            carMode  = 0; // ÊÖ¶¯µ²
+            carMode  = 0; // ï¿½Ö¶ï¿½ï¿½ï¿½
             lTargetV = 0;
             rTargetV = 0;
-            //ÃùµÑ
+            //ï¿½ï¿½ï¿½ï¿½
             BEEP  = 1;
             vTaskDelay(100);
             BEEP = 0;
@@ -752,13 +752,13 @@ static void AnalyseCommand_Task(void *parameter)
             BEEP = 1;
             vTaskDelay(1000);
             BEEP = 0;
-            //ÃùµÑÍê½øÈë¸úËæÄ£Ê½
+            //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£Ê½
             carMode = 2;
         }
 		else if (commands[0] == 0x09){
 			lightFlag = 0;
 			Go();
-            carMode  = 0; // ÊÖ¶¯µ²
+            carMode  = 0; // ï¿½Ö¶ï¿½ï¿½ï¿½
             lTargetV = commands[1];
             rTargetV = commands[2];
             BEEP  = 1;
@@ -772,10 +772,10 @@ static void AnalyseCommand_Task(void *parameter)
     }
 }
 
-float filterNum = 0.5f; // µÍÍ¨ÂË²¨ÏµÊý
+float filterNum = 0.5f; // ï¿½ï¿½Í¨ï¿½Ë²ï¿½Ïµï¿½ï¿½
 /**
- * @brief    ¼ÆËãËÙ¶ÈÈÎÎñÖ÷Ìå
- * @brief    ¼ÆËãÃ¿Ãë²âËÙ´«¸ÐÆ÷
+ * @brief    ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @brief    ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 static void lCalcVelocity_Task(void *parameter)
 {
@@ -788,15 +788,15 @@ static void lCalcVelocity_Task(void *parameter)
             xSemaphoreTake(vSensorLCountHandle, 0);
         }
         lCounter++;
-        // ¼ÆËãÂÖ×ÓµÄËÙ¶È
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½Ù¶ï¿½
         lVelocity = Filter((ONEPULSEDISTANCE * lCounter) * 100 / lTime, lVelocity, filterNum);
         lTime     = 0;
     }
 }
 
 /**
- * @brief    ¼ÆËãËÙ¶ÈÈÎÎñÖ÷Ìå
- * @brief    ¼ÆËãÃ¿Ãë²âËÙ´«¸ÐÆ÷
+ * @brief    ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @brief    ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½
  */
 static void rCalcVelocity_Task(void *parameter)
 {
@@ -809,14 +809,14 @@ static void rCalcVelocity_Task(void *parameter)
             xSemaphoreTake(vSensorRCountHandle, 0);
         }
         rCounter++;
-        // ¼ÆËãÂÖ×ÓµÄËÙ¶È
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½Ù¶ï¿½
         rVelocity = Filter((ONEPULSEDISTANCE * rCounter) * 100 / rTime, rVelocity, filterNum);
         rTime     = 0;
     }
 }
 
 /**
- * @brief    ¼àÌý²âËÙ´«¸ÐÆ÷ÈÎÎñÖ÷Ìå
+ * @brief    ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ù´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  * @param    parameter
  * @retval   void
  */
@@ -834,7 +834,7 @@ static void ListeningSensors_Task(void *parameter)
             if (vL == 1) {
                 xReturn = xSemaphoreGive(vSensorLCountHandle);
                 if (xReturn != pdTRUE)
-                    printf("×ó²âËÙÆ÷ÐÅºÅÁ¿¸³ÖµÊ§°Ü£¬´íÎóÂëÎª£º%d\r\n", xReturn);
+                    printf("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ÖµÊ§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½%d\r\n", xReturn);
             }
             vL = !vL;
         }
@@ -842,7 +842,7 @@ static void ListeningSensors_Task(void *parameter)
             if (vR == 1) {
                 xReturn = xSemaphoreGive(vSensorRCountHandle);
                 if (xReturn != pdTRUE)
-                    printf("ÓÒ²âËÙÆ÷ÐÅºÅÁ¿¸³ÖµÊ§°Ü£¬´íÎóÂëÎª£º%d\r\n", xReturn);
+                    printf("ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åºï¿½ï¿½ï¿½ï¿½ï¿½ÖµÊ§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½%d\r\n", xReturn);
             }
             vR = !vR;
         }
@@ -853,7 +853,7 @@ static void ListeningSensors_Task(void *parameter)
 		else
 			distanceWarningFlag = 0;
 		if(distanceWarningFlag == 0 && TIM1CH1_CAPTURE_STA&0x8000){
-			//¾àÀëºÏÊÊÇÒÍê³ÉÒ»´ÎÉÏÉýÑØÂö³å²¶»ñ
+			//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å²¶ï¿½ï¿½
 			ultrasonicTimes = TIM1CH1_CAPTURE_STA&0x3FFF;
 			TIM1CH1_CAPTURE_STA = 0;
 			temp = Filter(ultrasonicTimes*0.17, distance, 0.8);
@@ -864,7 +864,7 @@ static void ListeningSensors_Task(void *parameter)
 }
 
 /**
- * @brief    LED_TaskÈÎÎñÖ÷Ìå
+ * @brief    LED_Taskï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  * @param    parameter
  * @retval   void
  */
@@ -873,19 +873,19 @@ static void LED_Task(void *parameter)
     while (1) {
 		if(lightFlag == 1){
 			TestLED = 0;
-			vTaskDelay(300 / portTICK_PERIOD_MS); /*ÑÓÊ±300ms*/
+			vTaskDelay(300 / portTICK_PERIOD_MS); /*ï¿½ï¿½Ê±300ms*/
 			TestLED = 1;
-			vTaskDelay(300 / portTICK_PERIOD_MS); /*ÑÓÊ±300ms*/
+			vTaskDelay(300 / portTICK_PERIOD_MS); /*ï¿½ï¿½Ê±300ms*/
 		}
     }
 }
 
 /**
- * @brief    Ò»½×µÍÍ¨ÂË²¨Ëã·¨
- * @param    newValue: ÐÂ²ÉÑùµÄÊý¾Ý
- * @param    oldValue: ÉÏÒ»¸öÂË²¨Êä³öÖµ
- * @param    alpha   : ÂË²¨ÏµÊý
- * @retval   ±¾´ÎÂË²¨Êä³öÖµ
+ * @brief    Ò»ï¿½×µï¿½Í¨ï¿½Ë²ï¿½ï¿½ã·¨
+ * @param    newValue: ï¿½Â²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param    oldValue: ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½Öµ
+ * @param    alpha   : ï¿½Ë²ï¿½Ïµï¿½ï¿½
+ * @retval   ï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½ï¿½Öµ
  */
 float Filter(float newValue, float oldValue, float alpha)
 {
@@ -896,48 +896,48 @@ float Filter(float newValue, float oldValue, float alpha)
 
 
 /**
- * @brief    »ñÈ¡¿ÕÏÐÈÎÎñµÄÈÎÎñ¶ÑÕ»ºÍÈÎÎñ¿ØÖÆ¿éÄÚ´æ
- * @param    ppxIdleTaskTCBBuffer		:	ÈÎÎñ¿ØÖÆ¿éÄÚ´æ
- * @param    ppxIdleTaskStackBuffer	:	ÈÎÎñ¶ÑÕ»ÄÚ´æ
- * @param    pulIdleTaskStackSize		:	ÈÎÎñ¶ÑÕ»´óÐ¡
+ * @brief    ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ï¿½Ú´ï¿½
+ * @param    ppxIdleTaskTCBBuffer		:	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ï¿½Ú´ï¿½
+ * @param    ppxIdleTaskStackBuffer	:	ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½Ú´ï¿½
+ * @param    pulIdleTaskStackSize		:	ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½Ð¡
  * @retval   void
  */
 void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
                                    StackType_t **ppxIdleTaskStackBuffer,
                                    uint32_t *pulIdleTaskStackSize)
 {
-    *ppxIdleTaskTCBBuffer   = &Idle_Task_TCB;           /* ÈÎÎñ¿ØÖÆ¿éÄÚ´æ */
-    *ppxIdleTaskStackBuffer = Idle_Task_Stack;          /* ÈÎÎñ¶ÑÕ»ÄÚ´æ */
-    *pulIdleTaskStackSize   = configMINIMAL_STACK_SIZE; /* ÈÎÎñ¶ÑÕ»´óÐ¡ */
+    *ppxIdleTaskTCBBuffer   = &Idle_Task_TCB;           /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ï¿½Ú´ï¿½ */
+    *ppxIdleTaskStackBuffer = Idle_Task_Stack;          /* ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½Ú´ï¿½ */
+    *pulIdleTaskStackSize   = configMINIMAL_STACK_SIZE; /* ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½Ð¡ */
 }
 
 /**
- * @brief    »ñÈ¡¶¨Ê±Æ÷ÈÎÎñµÄÈÎÎñ¶ÑÕ»ºÍÈÎÎñ¿ØÖÆ¿éÄÚ´æ
- * @param    ppxTimerTaskTCBBuffer	:		ÈÎÎñ¿ØÖÆ¿éÄÚ´æ
- * @param    ppxTimerTaskStackBuffer	:	ÈÎÎñ¶ÑÕ»ÄÚ´æ
- * @param    pulTimerTaskStackSize	:		ÈÎÎñ¶ÑÕ»´óÐ¡
+ * @brief    ï¿½ï¿½È¡ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ï¿½Ú´ï¿½
+ * @param    ppxTimerTaskTCBBuffer	:		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ï¿½Ú´ï¿½
+ * @param    ppxTimerTaskStackBuffer	:	ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½Ú´ï¿½
+ * @param    pulTimerTaskStackSize	:		ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½Ð¡
  * @retval   void
  */
 void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
                                     StackType_t **ppxTimerTaskStackBuffer,
                                     uint32_t *pulTimerTaskStackSize)
 {
-    *ppxTimerTaskTCBBuffer   = &Timer_Task_TCB;              /* ÈÎÎñ¿ØÖÆ¿éÄÚ´æ */
-    *ppxTimerTaskStackBuffer = Timer_Task_Stack;             /* ÈÎÎñ¶ÑÕ»ÄÚ´æ */
-    *pulTimerTaskStackSize   = configTIMER_TASK_STACK_DEPTH; /* ÈÎÎñ¶ÑÕ»´óÐ¡ */
+    *ppxTimerTaskTCBBuffer   = &Timer_Task_TCB;              /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¿ï¿½ï¿½Ú´ï¿½ */
+    *ppxTimerTaskStackBuffer = Timer_Task_Stack;             /* ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½Ú´ï¿½ */
+    *pulTimerTaskStackSize   = configTIMER_TASK_STACK_DEPTH; /* ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½ï¿½Ð¡ */
 }
 
 /**
- * @brief		´®¿Ú1ÖÐ¶Ï·þÎñ³ÌÐò
+ * @brief		ï¿½ï¿½ï¿½ï¿½1ï¿½Ð¶Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  * @param		void
  * @retval		void
  */
 void USART1_IRQHandler(void)
 {
-    if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) { // ½ÓÊÕÖÐ¶Ï
+    if (USART_GetITStatus(USART1, USART_IT_RXNE) != RESET) { // ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½
         if (USART1_RX_STA < USART_REC_LEN) {
             usart1RXTime = 0;
-            USART1_RX_BUF[USART1_RX_STA] = USART_ReceiveData(USART1); // ¶ÁÈ¡½ÓÊÕµ½µÄÊý¾Ý
+            USART1_RX_BUF[USART1_RX_STA] = USART_ReceiveData(USART1); // ï¿½ï¿½È¡ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             USART1_RX_STA++;
         } else {
             USART1_RX_STA = 0;
@@ -946,16 +946,16 @@ void USART1_IRQHandler(void)
 }
 
 /**
- * @brief		´®¿Ú2ÖÐ¶Ï·þÎñ³ÌÐò
+ * @brief		ï¿½ï¿½ï¿½ï¿½2ï¿½Ð¶Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
  * @param		void
  * @retval		void
  */
 void USART2_IRQHandler(void)
 {
-    if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) { // ½ÓÊÕÖÐ¶Ï
+    if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) { // ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½
         if (USART2_RX_STA < USART_REC_LEN) {
             usart2RXTime                 = 0;
-            USART2_RX_BUF[USART2_RX_STA] = USART_ReceiveData(USART2); // ¶ÁÈ¡½ÓÊÕµ½µÄÊý¾Ý
+            USART2_RX_BUF[USART2_RX_STA] = USART_ReceiveData(USART2); // ï¿½ï¿½È¡ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             USART2_RX_STA++;
         } else {
             USART2_RX_STA = 0;
@@ -966,38 +966,38 @@ void USART2_IRQHandler(void)
 
 void TIM1_CC_IRQHandler(void){
 	if (TIM_GetITStatus(TIM1, TIM_IT_CC1) != RESET){ 
-		//CC1 1 ·¢Éú²¶»ñÊÂ¼þ
+		//CC1 1 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½
 
 		if(TIM1CH1_CAPTURE_STA & 0x4000) {
-			//²¶»ñ¹ýÒ»¸öÉÏÉýÑØ£¬Õâ´ÎÊÇÏÂ½µÑØÀ´ÁË
-			TIM1CH1_CAPTURE_STA |= 0x8000;//±ê¼ÇÍê³É²¶»ñµ½Ò»´Î¸ßµçÆ½Âö³å
-			TIM_OC1PolarityConfig(TIM1, TIM_ICPolarity_Rising); //ÉèÖÃÎªÉÏÉýÑØ²¶»ñ 
+			//ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			TIM1CH1_CAPTURE_STA |= 0x8000;//ï¿½ï¿½ï¿½ï¿½ï¿½É²ï¿½ï¿½ï¿½Ò»ï¿½Î¸ßµï¿½Æ½ï¿½ï¿½ï¿½ï¿½
+			TIM_OC1PolarityConfig(TIM1, TIM_ICPolarity_Rising); //ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ 
 			TIM1CH1_CAPTURE_STA &= ~0x4000;
 		}
 		else{
-			//µÚÒ»´Î²¶»ñÉÏÉýÑØ
-			//Çå¿Õ£¬¿ªÊ¼¼ÆÊ±µÈ´ýÏÂ½µÑØ
+			//ï¿½ï¿½Ò»ï¿½Î²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			//ï¿½ï¿½Õ£ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½Ê±ï¿½È´ï¿½ï¿½Â½ï¿½ï¿½ï¿½
 			TIM1CH1_CAPTURE_STA = 0;
 			TIM_SetCounter(TIM1, 0); 
-			TIM1CH1_CAPTURE_STA |= 0X4000;//±ê¼Ç²¶»ñµ½ÁËÉÏÉýÑØ
-			TIM_OC1PolarityConfig(TIM1, TIM_ICPolarity_Falling); //ÉèÖÃÎªÏÂ½µÑØ²¶»ñ 
+			TIM1CH1_CAPTURE_STA |= 0X4000;//ï¿½ï¿½Ç²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			TIM_OC1PolarityConfig(TIM1, TIM_ICPolarity_Falling); //ï¿½ï¿½ï¿½ï¿½Îªï¿½Â½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ 
 		}
 	}
-	TIM_ClearITPendingBit(TIM1, TIM_IT_CC1); //Çå³ýÖÐ¶Ï±êÖ¾Î»	
+	TIM_ClearITPendingBit(TIM1, TIM_IT_CC1); //ï¿½ï¿½ï¿½ï¿½Ð¶Ï±ï¿½Ö¾Î»	
 }
 
-//10us¼¶ÖÐ¶Ï£¬ÊµÏÖÃ¿Ãë·¢10usµÄÂö³å¸øHC-SR04
+//10usï¿½ï¿½ï¿½Ð¶Ï£ï¿½Êµï¿½ï¿½Ã¿ï¿½ë·¢10usï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½HC-SR04
 void TIM1_UP_IRQHandler(void){
 	static u32 counter_10us = 0;
 	static u8 counter_ms;
     BaseType_t xReturn = pdPASS;
     u8 i;
-	if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET) { // Òç³öÖÐ¶Ï
+	if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET) { // ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½
 		//HC-SR04
 		if((TIM1CH1_CAPTURE_STA & 0X8000)==0 && (TIM1CH1_CAPTURE_STA & 0X4000)){
-			//»¹Î´Íê³É²¶»ñ£¬µ«ÊÇÒÑ¾­²¶»ñµ½¸ßµçÆ½ÁË
+			//ï¿½ï¿½Î´ï¿½ï¿½É²ï¿½ï¿½ñ£¬µï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ñµ½¸ßµï¿½Æ½ï¿½ï¿½
 			if((TIM1CH1_CAPTURE_STA&0X3FFF) == 0X3FFF){
-				//¸ßµçÆ½Ì«³¤ÁË(³ÖÐøÊ±¼ä´óÓÚ16383*10us)
+				//ï¿½ßµï¿½Æ½Ì«ï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½16383*10us)
 				TIM1CH1_CAPTURE_STA |= 0xFFFF;
 			}
 			else TIM1CH1_CAPTURE_STA++;		
@@ -1015,9 +1015,9 @@ void TIM1_UP_IRQHandler(void){
 			counter_10us = 0;
 		}
 		
-		//ms¼¶MCU¼ÆÊ±
+		//msï¿½ï¿½MCUï¿½ï¿½Ê±
 		if(counter_ms == 100){
-			//MCUÔËÐÐÁË1ms
+			//MCUï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1ms
 			if (keyCD < 20)
 				keyCD++;
 			
@@ -1047,19 +1047,19 @@ void TIM1_UP_IRQHandler(void){
 
 			// else if(nodeCounter == 6)
 			if (usart1RXTime == 10) {
-				// ½ÓÊÕÍêÁËÒ»´®´®¿ÚÏûÏ¢
+				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
 				if (USART1_RX_BUF[0] == 0xC1 && USART1_RX_BUF[1] == 0xC2 && USART1_RX_BUF[2] == 0xC3 && USART1_RX_BUF[3] == 0xC4) {
 					for (i = 0; i < WIRELESSCOMMAND_QUEUE_LENGTH; i++) {
 						xReturn = xQueueSendFromISR(wirelessCommandHandle, &USART1_RX_BUF[4 + i], NULL);
 					}
 					if (xReturn != pdTRUE)
-						printf("¿ØÖÆÃüÁîÏûÏ¢·¢ËÍÊ§°Ü");
+						printf("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½");
 				}
 				USART1_RX_STA = 0;
-				usart1RXTime  = 0xFF; // °ÑÊ±¼äÀ­Âú£¬±íÊ¾Ã»ÓÐÊÕµ½ÐÂµÄÏûÏ¢
+				usart1RXTime  = 0xFF; // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾Ã»ï¿½ï¿½ï¿½Õµï¿½ï¿½Âµï¿½ï¿½ï¿½Ï¢
 			}
 			if (usart2RXTime == 10) {
-				// ½ÓÊÕÍêÁËÒ»´®´®¿ÚÏûÏ¢
+				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
 				if (USART2_RX_BUF[0] == 0xC1 && USART2_RX_BUF[1] == 0xC2 && USART2_RX_BUF[2] == 0xC3 && USART2_RX_BUF[3] == 0xC4) {
 					
 					if(USART2_RX_BUF[4] == 0xFF)
@@ -1070,25 +1070,25 @@ void TIM1_UP_IRQHandler(void){
 						}
 					}
 					if (xReturn != pdTRUE)
-						printf("¿ØÖÆÃüÁîÏûÏ¢·¢ËÍÊ§°Ü");
+						printf("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½");
 				}
 				USART2_RX_STA = 0;
-				usart2RXTime  = 0xFF; // °ÑÊ±¼äÀ­Âú£¬±íÊ¾Ã»ÓÐÊÕµ½ÐÂµÄÏûÏ¢
+				usart2RXTime  = 0xFF; // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾Ã»ï¿½ï¿½ï¿½Õµï¿½ï¿½Âµï¿½ï¿½ï¿½Ï¢
 			}
 		}
 		counter_ms++;
 
 	}
-	TIM_ClearITPendingBit(TIM1, TIM_IT_Update); //Çå³ýÖÐ¶Ï±êÖ¾Î»
+	TIM_ClearITPendingBit(TIM1, TIM_IT_Update); //ï¿½ï¿½ï¿½ï¿½Ð¶Ï±ï¿½Ö¾Î»
 }
 
-// // ¶¨Ê±Æ÷2ÖÐ¶Ï·þÎñº¯Êý
-// // Ã¿ºÁÃë´¥·¢Ò»´ÎÖÐ¶Ï
+// // ï¿½ï¿½Ê±ï¿½ï¿½2ï¿½Ð¶Ï·ï¿½ï¿½ï¿½ï¿½ï¿½
+// // Ã¿ï¿½ï¿½ï¿½ë´¥ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ð¶ï¿½
 // void TIM2_IRQHandler(void)
 // {
 //     BaseType_t xReturn = pdPASS;
 //     u8 i;
-//     if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET) { // Òç³öÖÐ¶Ï
+//     if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET) { // ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½
 // 		if (keyCD < 20)
 // 			keyCD++;
 		
@@ -1117,19 +1117,19 @@ void TIM1_UP_IRQHandler(void){
 
 //         // else if(nodeCounter == 6)
 //         if (usart1RXTime == 10) {
-//             // ½ÓÊÕÍêÁËÒ»´®´®¿ÚÏûÏ¢
+//             // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
 //             if (USART1_RX_BUF[0] == 0xC1 && USART1_RX_BUF[1] == 0xC2 && USART1_RX_BUF[2] == 0xC3 && USART1_RX_BUF[3] == 0xC4) {
 //                 for (i = 0; i < WIRELESSCOMMAND_QUEUE_LENGTH; i++) {
 //                     xReturn = xQueueSendFromISR(wirelessCommandHandle, &USART1_RX_BUF[4 + i], NULL);
 //                 }
 //                 if (xReturn != pdTRUE)
-//                     printf("¿ØÖÆÃüÁîÏûÏ¢·¢ËÍÊ§°Ü");
+//                     printf("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½");
 //             }
 //             USART1_RX_STA = 0;
-//             usart1RXTime  = 0xFF; // °ÑÊ±¼äÀ­Âú£¬±íÊ¾Ã»ÓÐÊÕµ½ÐÂµÄÏûÏ¢
+//             usart1RXTime  = 0xFF; // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾Ã»ï¿½ï¿½ï¿½Õµï¿½ï¿½Âµï¿½ï¿½ï¿½Ï¢
 //         }
 //         if (usart2RXTime == 10) {
-//             // ½ÓÊÕÍêÁËÒ»´®´®¿ÚÏûÏ¢
+//             // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
 //             if (USART2_RX_BUF[0] == 0xC1 && USART2_RX_BUF[1] == 0xC2 && USART2_RX_BUF[2] == 0xC3 && USART2_RX_BUF[3] == 0xC4) {
                 
 //                 if(USART2_RX_BUF[4] == 0xFF)
@@ -1140,12 +1140,12 @@ void TIM1_UP_IRQHandler(void){
 //                     }
 //                 }
 //                 if (xReturn != pdTRUE)
-//                     printf("¿ØÖÆÃüÁîÏûÏ¢·¢ËÍÊ§°Ü");
+//                     printf("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½");
 //             }
 //             USART2_RX_STA = 0;
-//             usart2RXTime  = 0xFF; // °ÑÊ±¼äÀ­Âú£¬±íÊ¾Ã»ÓÐÊÕµ½ÐÂµÄÏûÏ¢
+//             usart2RXTime  = 0xFF; // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾Ã»ï¿½ï¿½ï¿½Õµï¿½ï¿½Âµï¿½ï¿½ï¿½Ï¢
 //         }
-//         TIM_ClearITPendingBit(TIM2, TIM_IT_Update); // Çå³ýÖÐ¶Ï±êÖ¾Î»
+//         TIM_ClearITPendingBit(TIM2, TIM_IT_Update); // ï¿½ï¿½ï¿½ï¿½Ð¶Ï±ï¿½Ö¾Î»
 //     }
 // }
 

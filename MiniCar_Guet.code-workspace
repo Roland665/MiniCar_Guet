@@ -12,7 +12,11 @@
             "hc_sr04.h": "c",
             "sys.h": "c",
             "iic_hard.h": "c",
-            "mpu6050.h": "c"
+            "mpu6050.h": "c",
+            "freertos.h": "c",
+            "beep.h": "c",
+            "led.h": "c",
+            "usart.h": "c"
         }
     }
 }

@@ -1,5 +1,5 @@
 #include "u8g2_user.h"
-#include "IIC/IIC_Hard.h"
+#include "IIC_Hard/IIC_Hard.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
@@ -30,20 +30,7 @@ uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_p
 			break;
 			
 		case U8X8_MSG_BYTE_END_TRANSFER:
-			// IIC_Start();
-			// IIC_Send_Address_Write(0x78);//write your oled address in here
-			// for(i = 0; i < buf_idx; i++){
-			// 	IIC_Send_Byte(buffer[i]);
-			// }
-			// IIC_Stop();
-		
-            IIC_Write_len_Byte(I2C1_BASE, OLED_ADDR, buffer[0], buf_idx-1, &buffer[1]);
-
-
-			break;
-			
-		case U8X8_MSG_BYTE_SET_DC:
-			/* ignored for i2c */
+            IIC_Register_Write_len_Byte(I2C1_BASE, OLED_ADDR, buffer[0], buf_idx-1, &buffer[1]);
 			break;
 		
 		default:

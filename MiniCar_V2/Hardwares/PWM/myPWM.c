@@ -8,7 +8,7 @@
   * @param	  width     :pwm脉冲宽度
   * @retval   void
   */
-void M0PWM0_Init(u32 PWM_CLKDIV, u16 period, u16 width){
+void M0PWM0_Init(u32 PWM_CLKDIV, u16 period){
 	//配置PWM时钟（设置USEPWM_CLKDIV分频器）
 	SysCtlPWMClockSet(PWM_CLKDIV);
 	
@@ -35,11 +35,8 @@ void M0PWM0_Init(u32 PWM_CLKDIV, u16 period, u16 width){
 	*/
 	PWMGenPeriodSet(PWM0_BASE,PWM_GEN_0, period);			//pwm周期													
 
-	//配置PWM占空比
-	PWMPulseWidthSet(PWM0_BASE, PWM_OUT_0, width);		//脉冲长度
-
-	//使能PWM模块0输出
-	PWMOutputState(PWM0_BASE,PWM_OUT_0_BIT,true);
+	//失能PWM模块0输出,保证引脚开局低电平
+	PWMOutputState(PWM0_BASE,PWM_OUT_0_BIT,false);
 
     PWMGenEnable(PWM0_BASE,PWM_GEN_0);
 }
@@ -51,7 +48,7 @@ void M0PWM0_Init(u32 PWM_CLKDIV, u16 period, u16 width){
   * @param	  width     :pwm脉冲宽度
   * @retval   void
   */
-void M0PWM1_Init(u32 PWM_CLKDIV, u16 period, u16 width){
+void M0PWM1_Init(u32 PWM_CLKDIV, u16 period){
 	//配置PWM时钟（设置USEPWM_CLKDIV分频器）
 	SysCtlPWMClockSet(PWM_CLKDIV);
 	
@@ -76,13 +73,10 @@ void M0PWM1_Init(u32 PWM_CLKDIV, u16 period, u16 width){
 	f为期望频率，
 	SysClk为系统时钟频率。
 	*/
-	PWMGenPeriodSet(PWM0_BASE,PWM_GEN_0, period);			//pwm周期													
+	PWMGenPeriodSet(PWM0_BASE,PWM_GEN_0, period);			//pwm周期
 
-	//配置PWM占空比
-	PWMPulseWidthSet(PWM0_BASE, PWM_OUT_1, width);		//脉冲长度
-
-	//使能PWM模块0输出
-	PWMOutputState(PWM0_BASE,PWM_OUT_1_BIT,true);
+	//失能PWM模块0输出,保证引脚开局低电平
+	PWMOutputState(PWM0_BASE,PWM_OUT_0_BIT,false);
 
     PWMGenEnable(PWM0_BASE,PWM_GEN_0);
 }

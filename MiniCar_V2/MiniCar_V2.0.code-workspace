@@ -4,6 +4,22 @@
             "path": "."
         }
     ],
-    "settings": {},
+    "settings": {
+        "files.associations": {
+            "motor.h": "c",
+            "led.h": "c",
+            "beep.h": "c",
+            "mypwm.h": "c",
+            "mpu6050.h": "c",
+            "usart.h": "c",
+            "sys.h": "c",
+            "interrupt.h": "c",
+            "iic_hard.h": "c",
+            "u8g2_user.h": "c",
+            "ganv_track.h": "c",
+            "pid.h": "c",
+            "stdlib.h": "c"
+        }
+    },
     "extensions": {}
 }

@@ -1,6 +1,6 @@
 #include "LED/led.h"   
 
-//所有独立IO口控制的LED总的初始函数
+//锟斤拷锟叫讹拷锟斤拷IO锟节匡拷锟狡碉拷LED锟杰的筹拷始锟斤拷锟斤拷
 void LED_Init(void){
 	LED0_RGB_Init();
 }
