@@ -231,7 +231,8 @@
 //------------- <<< end of configuration section >>> ---------------------------
 
 /* Defines needed by FreeRTOS to implement CMSIS RTOS2 API. Do not change! */
-#define configCPU_CLOCK_HZ                      (SystemCoreClock)
+//#define configCPU_CLOCK_HZ                      (SystemCoreClock)
+#define configCPU_CLOCK_HZ                    80000000
 #define configSUPPORT_STATIC_ALLOCATION         1
 #define configSUPPORT_DYNAMIC_ALLOCATION        1
 #define configUSE_PREEMPTION                    1
