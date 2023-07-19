@@ -17,16 +17,20 @@ u8 UART0_RX_BUF[UART_REC_LEN] = {0};  //串口接收缓冲区,最大UART_REC_LEN
 u16 UART0_RX_STA = 0;//接收到的有效字节数目
 u8 uart0RXTime = 0xFF;//串口消息间隔计时，初始化把时间拉满，表示没有收到新的消息
 
-u8 UART1_RX_BUF[UART_REC_LEN] = {0};  //串口接收缓冲区,最大UART_REC_LEN个字节.
+u8 UART1_RX_BUF[UART1_REC_LEN] = {0};  //串口接收缓冲区,最大UART_REC_LEN个字节.
 u16 UART1_RX_STA = 0;//接收到的有效字节数目
 u8 uart1RXTime = 0xFF;//串口消息间隔计时，初始化把时间拉满，表示没有收到新的消息
+
+u8 UART2_RX_BUF[UART2_REC_LEN] = {0};  //串口接收缓冲区,最大UART_REC_LEN个字节.
+u16 UART2_RX_STA = 0;//接收到的有效字节数目
+u8 uart2RXTime = 0xFF;//串口消息间隔计时，初始化把时间拉满，表示没有收到新的消息
 
 //初始化串口0和中断
 void Uart0_Init(uint32_t bound){
     // Enable the GPIO Peripheral used by the UART.
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
 
-    // Enable UART0
+    // Enable UART Peripheral
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
 
     // Configure GPIO Pins for UART mode.
@@ -55,7 +59,7 @@ void Uart1_Init(uint32_t bound){
     // Enable the GPIO Peripheral used by the UART.
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);
 
-    // Enable UART0
+    // Enable UART Peripheral
     MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
 
     // Configure GPIO Pins for UART mode.
@@ -77,4 +81,33 @@ void Uart1_Init(uint32_t bound){
 
     // Enable UART0 interrupt
     MAP_IntEnable(INT_UART1);
+}
+
+//初始化串口2和中断
+void Uart2_Init(uint32_t bound){
+    // Enable the GPIO Peripheral used by the UART.
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+
+    // Enable UART Peripheral
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART2);
+
+    // Configure GPIO Pins for UART mode.
+    MAP_GPIOPinConfigure(GPIO_PD6_U2RX);
+    MAP_GPIOPinConfigure(GPIO_PD7_U2TX);
+    MAP_GPIOPinTypeUART(GPIOD_BASE, GPIO_PIN_6 | GPIO_PIN_7);
+
+    // Use the internal 16MHz oscillator as the UART clock source.
+    MAP_UARTClockSourceSet(UART2_BASE, UART_CLOCK_PIOSC);
+
+    // Initialize the UART for console I/O.
+    UARTStdioConfig(2, bound, 16000000);//16Mhz
+
+    // Set usart int priorityset
+    MAP_IntPrioritySet(INT_UART2,3);
+
+    // Enable UART receive interrupt and receive timeout interrupt
+    MAP_UARTIntEnable(UART2_BASE,UART_INT_RX | UART_INT_RT);
+
+    // Enable UART0 interrupt
+    MAP_IntEnable(INT_UART2);
 }
