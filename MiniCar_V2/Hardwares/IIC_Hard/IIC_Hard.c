@@ -53,8 +53,8 @@ void IIC2_Init(void){
 	MAP_GPIOPinTypeI2CSCL(GPIOE_BASE, GPIO_PIN_4);
 	MAP_GPIOPinTypeI2C(GPIOE_BASE, GPIO_PIN_5);
 
-	// Enable and initialize the I2C3 master module.  
-    // Use the system clock for the I2C3 module.  
+	// Enable and initialize the I2C2 master module.  
+    // Use the system clock for the I2C2 module.  
     // The last parameter sets the I2C data transfer rate.
 	// If false the data rate is set to 100kbps and if true the data rate will be set to 400kbps.
 	MAP_I2CMasterInitExpClk(I2C2_BASE, SysCtlClockGet(), false);
@@ -93,14 +93,14 @@ void IIC3_Init(void){
 }
 
 /** 
-  * @brief    I2C指定地址写一字节数据
+  * @brief    I2C指定寄存器写一字节数据
   * @param    ui32Base          ：IIC基地址
   * @param    target_address    ：从机地址
   * @param    data_address      ：数据目的地址
   * @param    data              ：待写数据
   * @retval    
   */
-void IIC_Write_One_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_address, uint8_t data)
+void IIC_Register_Write_One_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_address, uint8_t data)
 {
 	//specify that we want to communicate to device address with an intended write to bus
 	I2CMasterSlaveAddrSet(ui32Base, target_address, false);
@@ -126,7 +126,7 @@ void IIC_Write_One_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_add
 
 
 /** 
-  * @brief    I2C指定地址写不定长字节数据
+  * @brief    I2C指定寄存器写不定长字节数据
   * @param    ui32Base          ：IIC基地址
   * @param    target_address    ：从机地址
   * @param    data_address      ：数据目的地址
@@ -134,7 +134,7 @@ void IIC_Write_One_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_add
   * @param    data              ：待写数据
   * @retval    
   */
-void IIC_Write_len_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_address, u8 len, uint8_t *data)
+void IIC_Register_Write_len_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_address, u8 len, uint8_t *data)
 {
 	//specify that we want to communicate to device address with an intended write to bus
 	I2CMasterSlaveAddrSet(ui32Base, target_address, false); 
@@ -172,13 +172,13 @@ void IIC_Write_len_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_add
 }
 
 /**
-  * @brief    I2C指定地址读一字节数据
+  * @brief    I2C指定寄存器读一字节数据
   * @param    ui32Base          ：IIC基地址
   * @param    target_address    ：从机地址
   * @param    data_address      ：数据源地址
   * @retval   读取到的数据
   */
-uint8_t IIC_Read_One_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_address)
+uint8_t IIC_Register_Read_One_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_address)
 {
 	//specify that we want to communicate to device address with an intended write to bus
 	I2CMasterSlaveAddrSet(ui32Base, target_address, false);
@@ -206,3 +206,41 @@ uint8_t IIC_Read_One_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_a
 }
 
 
+/**
+  * @brief  IIC发起一次写操作
+  * @param  ui32Base        : IIC端口号
+  * @param  Device_address  : 从机地址
+  * @param  data            : 待写数据
+  * @retval void
+  */
+void IIC_Write_One_Byte(u32 ui32Base, uint16_t Device_address, u8 data){
+	//read from the specified slave device
+	I2CMasterSlaveAddrSet(ui32Base, Device_address, true);
+	
+	//put data to be sent into FIFO
+	I2CMasterDataPut(ui32Base, data);
+	
+	//send control byte and read from the register from the MCU
+	I2CMasterControl(ui32Base, I2C_MASTER_CMD_SINGLE_SEND);// 起始信号+从机地址+写数据+停止信号
+}
+
+/**
+  * @param  void
+  * @brief  IIC发起一次读操作
+  * @param  ui32Base        : IIC端口号
+  * @param  Device_address  : 从机地址
+  * @retval 1byte 数据
+  */
+u8 IIC_Read_One_Byte(u32 ui32Base, uint16_t Device_address){
+	//read from the specified slave device
+	I2CMasterSlaveAddrSet(ui32Base, Device_address, true);
+
+	//send control byte and read from the register from the MCU
+	I2CMasterControl(ui32Base, I2C_MASTER_CMD_SINGLE_RECEIVE);// 起始信号+从机地址+接收数据+停止信号
+
+	//wait while checking for MCU to complete the transaction
+	while(I2CMasterBusy(ui32Base));
+
+	//Get the data from the MCU register and return to caller
+	return( I2CMasterDataGet(ui32Base));
+}
