@@ -8,7 +8,6 @@
 #include "CAP/myCap.h"
 #include "Timer/myTimer.h"
 #include "Filter/Filters.h"
-//#include "MPU6050/mpu6050.h"
 #include "PID/PID.h"
 #include "BEEP/beep.h"
 #include "MOTOR/motor.h"
@@ -28,15 +27,6 @@
 */
 
 /**************************** 内核对象定义区 ********************************/
-/*最多可以存储 UART1_REC_LEN 个 u8类型变量的队列 */
-#define U1RX_QUEUE_LENGTH         UART1_REC_LEN
-#define U1RX_QUEUE_ITEM_SIZE      sizeof(u8)
-/*串口1接收消息队列句柄*/
-static QueueHandle_t U1RX_QUEUE_Handle = NULL;
-/*串口1消息队列对象*/
-static StaticQueue_t U1RX_QUEUE_Structure;
-/*串口1消息队列的存储区域，大小至少有 uxQueueLength * uxItemSize 个字节 */
-uint8_t U1RX_QUEUE_Storage_Area[U1RX_QUEUE_LENGTH * U1RX_QUEUE_ITEM_SIZE];
 
 
 /**************************** 任务定义区 ********************************/
@@ -90,18 +80,6 @@ TaskHandle_t Ranging_Task_Handle;
 // 任务函数
 void Ranging_Task(void *pvParameters);
 
-#ifdef MPU6050
-/* MPU6050_Sensor 任务 */
-// 任务栈深
-#define MPU6050_Sensor_Task_Stack_Deep 128
-// 任务堆栈
-StackType_t MPU6050_Sensor_Task_Stack[MPU6050_Sensor_Task_Stack_Deep];
-// 任务句柄
-TaskHandle_t MPU6050_Sensor_Task_Handle;
-// 任务函数
-void MPU6050_Sensor_Task(void *pvParameters);
-#endif
-
 /* Run 任务 */
 // 任务栈深
 #define Run_Task_Stack_Deep 128
@@ -122,6 +100,16 @@ TaskHandle_t OLEDShowing_Task_Handle;
 // 任务函数
 void OLEDShowing_Task(void *pvParameters);
 
+/* SpeedDetection 任务 */
+// 任务栈深
+#define SpeedDetection_Task_Stack_Deep 256
+// 任务堆栈
+StackType_t SpeedDetection_Task_Stack[SpeedDetection_Task_Stack_Deep];
+// 任务句柄
+TaskHandle_t SpeedDetection_Task_Handle;
+// 任务函数
+void SpeedDetection_Task(void *pvParameters);
+
 /**************************** 全局变量定义区 ********************************/
 float distance = 0;//小车与前方物体间距离(单位cm)
 u16 T2CCP0_STA = 0; //输入捕获状态 bit15表示是否完成一次脉冲捕获，bit14表示是否完成脉冲第一次变化沿，bit13~bit0表示脉冲持续时间(T2CCP0_STA++语句触发周期)
@@ -138,6 +126,17 @@ int16_t lPwmVal;
 int16_t rPwmVal;
 
 u8 carMode = 0;//小车运行模式，0表示外部控制，1表示寻迹模式，2为其他
+
+u8 ackFlag = 0;// 应答标志位，收到应答时置一，处理完归零
+
+u32 lPulseCounter = 0;//左轮编码器脉冲计数器
+u32 rPulseCounter = 0;//右轮编码器脉冲计数器
+u8 lPulseCounterTime = 0xFF;//左轮编码器脉冲计数周期
+u8 rPulseCounterTime = 0xFF;//右轮编码器脉冲计数周期
+
+float lSpeed;
+float rSpeed;
+float speed;
 void setup(void) //串口0初始化
 {
 	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ); //设置系统时钟为80MHz
@@ -146,12 +145,7 @@ void setup(void) //串口0初始化
 	Uart0_Init(115200);
 	Uart1_Init(115200);
 	Uart2_Init(115200);
-	HC_SR04_Init();
-	HC_SR04_Start();
 	Time0A_Init(800-1);//系统频率为80Mhz，800/80000000=10us,实现10us级中断
-#ifdef MPU6050
-    mpu6050_Init();
-#endif
 }
 
 int main(void)
@@ -174,11 +168,6 @@ int main(void)
 void AppCreate_Task(void *pvParameters)
 {
    taskENTER_CRITICAL(); //进入临界区
-    //创建 U1_QUEUE 消息队列
-    U1RX_QUEUE_Handle = xQueueCreateStatic(U1RX_QUEUE_LENGTH,               // 队列深度
-                                               U1RX_QUEUE_ITEM_SIZE,      // 队列数据单元的单位
-                                               U1RX_QUEUE_Storage_Area,   // 队列的存储区域
-                                               &U1RX_QUEUE_Structure);    // 队列的数据结构
                                                
     //创建 U1RX_Analyzing 任务
     xTaskCreate((TaskFunction_t)	U1RX_Analyzing_Task,				// 任务函数
@@ -212,16 +201,6 @@ void AppCreate_Task(void *pvParameters)
                 (UBaseType_t)	3,						        // 任务优先级
                 (TaskHandle_t *)	&Ranging_Task_Handle);		// 任务句柄
 
-#ifdef MPU6050
-    //创建 MPU6050_Sensor_Task 任务
-    xTaskCreate((TaskFunction_t)	MPU6050_Sensor_Task,			// 任务函数
-                (const char *)	"MPU6050_Sensor_Task",			    // 任务名称
-                (uint16_t)		MPU6050_Sensor_Task_Stack_Deep,	    // 任务堆栈大小
-                (void *)			NULL,					        // 传递给任务函数的参数
-                (UBaseType_t)	3,						            // 任务优先级
-                (TaskHandle_t *)	&MPU6050_Sensor_Task_Handle);	// 任务句柄
-#endif
-
     //创建 Run_Task 任务
     xTaskCreate((TaskFunction_t)	Run_Task,				// 任务函数
                 (const char *)	"Run_Task",				    // 任务名称
@@ -236,7 +215,15 @@ void AppCreate_Task(void *pvParameters)
                 (uint16_t)		OLEDShowing_Task_Stack_Deep,	// 任务堆栈大小
                 (void *)			NULL,					    // 传递给任务函数的参数
                 (UBaseType_t)	3,						        // 任务优先级
-                (TaskHandle_t *)	&OLEDShowing_Task_Handle);	// 任务句柄
+                (TaskHandle_t *)	&OLEDShowing_Task_Handle);	// 任务句柄 
+
+    //创建 SpeedDetection_Task 任务
+    xTaskCreate((TaskFunction_t)	SpeedDetection_Task,		    // 任务函数
+                (const char *)	"SpeedDetection_Task",				// 任务名称
+                (uint16_t)		SpeedDetection_Task_Stack_Deep,	    // 任务堆栈大小
+                (void *)			NULL,					        // 传递给任务函数的参数
+                (UBaseType_t)	3,						            // 任务优先级
+                (TaskHandle_t *)	&SpeedDetection_Task_Handle);	// 任务句柄 
 
     vTaskDelete(AppCreate_Task_Handle);//删除 AppCreate 任务
     taskEXIT_CRITICAL();//退出临界区
@@ -244,11 +231,30 @@ void AppCreate_Task(void *pvParameters)
 
 /**
   * @brief OLED显示任务主体
-  * @brief
-  * @param
-  * @retval
   */
-    u8 openFlag = 1;
+static void SpeedDetection_Task(void *parameter){
+    T3CCP0_Init();
+    while(1){
+        if(lPulseCounterTime >= 50){
+            //理论上是每50ms计算一次当前速度
+            lSpeed = lPulseCounter*ONEPULSE_FOR_DISTANCE/lPulseCounterTime;//计算出速度，单位是m/s
+            lPulseCounterTime = 0;
+            lPulseCounter = 0;
+        }
+        if(rPulseCounterTime >= 50){
+            //理论上是每50ms计算一次当前速度
+            rSpeed = rPulseCounter*ONEPULSE_FOR_DISTANCE/rPulseCounterTime;//计算出速度，单位是m/s
+            rPulseCounterTime = 0;
+            rPulseCounter = 0;
+        }
+        speed = (rSpeed+lSpeed)/2;
+        printf("当前车速为:%.1lfcm/s,左车轮为:%.1lfcm/s,右车轮为:%.1lfcm/s\r\n", speed, lSpeed, rSpeed);
+    }
+}
+
+/**
+  * @brief OLED显示任务主体
+  */
 static void OLEDShowing_Task(void *parameter)
 {
     char str[128] = {0}; // 需要显示的字符串临时存放处
@@ -259,22 +265,22 @@ static void OLEDShowing_Task(void *parameter)
     u8g2_SetPowerSave(&u8g2, 0); // place 1 means open power-saveing, you`ll see nothing in the screem
     while (1) {
         u8g2_ClearBuffer(&u8g2); // clear the u8g2 buffer
-        if(openFlag == 1){
+        if(carMode == 0){
             u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf);
-            sprintf(str, "%d %d %d %d %d %d %d %d",    (trackState>>7)&1,
-                                                (trackState>>6)&1,
-                                                (trackState>>5)&1, 
-                                                (trackState>>4)&1, 
-                                                (trackState>>3)&1, 
-                                                (trackState>>2)&1, 
-                                                (trackState>>1)&1, 
-                                                (trackState>>0)&1);
+            sprintf(str, "%d %d %d %d %d %d %d %d", (trackState>>7)&1,
+                                                    (trackState>>6)&1,
+                                                    (trackState>>5)&1, 
+                                                    (trackState>>4)&1, 
+                                                    (trackState>>3)&1, 
+                                                    (trackState>>2)&1, 
+                                                    (trackState>>1)&1, 
+                                                    (trackState>>0)&1);
             u8g2_DrawStr(&u8g2, 5, 37, str);
-            sprintf(str, "%d   %d", lPwmVal, rPwmVal);
-            u8g2_DrawStr(&u8g2, 30, 60, str);
+            sprintf(str, "%d  %d  %d", lPwmVal, rPwmVal, (int)(lSpeed*100));
+            u8g2_DrawStr(&u8g2, 10, 60, str);
         }
         else{
-            //待机显示动画 
+            //手动控制模式显示动画 
             static short i,j;
             static short xTemp = 0;
             static short yTemp = 8-1;
@@ -323,47 +329,34 @@ static void OLEDShowing_Task(void *parameter)
   */
 void Run_Task(void *pvParameters){
     int8_t trackErr;
-    int16_t commonPwmVal = 2000;
+    int16_t commonPwmVal = motor_PWMPeriod*0.4;
     // int8_t lPwmVal = commonPwmVal,rPwmVal = commonPwmVal;
     rPwmVal = commonPwmVal;
     lPwmVal = commonPwmVal;
     int16_t pidResult;
-    PID *trackPID = PID_Position_Create(400,0,0,5000,100000);
+    PID *trackPID = PID_Position_Create(400,0,0,motor_PWMPeriod,motor_PWMPeriod+7*400);
     Ganv_Track_Init();// 初始化寻迹模块
     Motor_Init();// 初始化电机驱动IO，一个是正反转，一个是PWM调速，周期为3200，初始占空比为0，频率为25Khz
     while(1){
-        //Get the track state
-        trackState = Ganv_Get_DD();
-        trackErr = Ganv_Calc_DD_Err(trackState);
-		if(trackErr == 66){
-			rPwmVal = 0;
-			lPwmVal = 0;
-		}
-		else{
-			pidResult = PID_Position(trackPID, trackErr);
-			rPwmVal = commonPwmVal + pidResult;
-			lPwmVal = commonPwmVal - pidResult;
-		}
-        Motor_SetSpeed(lPwmVal,rPwmVal);
-        vTaskDelay(10);
+        if(carMode == 1){
+            //Get the track state
+            trackState = Ganv_Get_DD();
+            trackErr = Ganv_Calc_DD_Err(trackState);
+            if(trackErr == 66){
+                rPwmVal = 0;
+                lPwmVal = 0;
+                // lPwmVal = -motor_PWMPeriod*0.4;
+                // rPwmVal = -motor_PWMPeriod*0.4;
+            }
+            else{
+                pidResult = PID_Position(trackPID, trackErr);
+                rPwmVal = commonPwmVal + pidResult;
+                lPwmVal = commonPwmVal - pidResult;
+            }        
+            Motor_SetSpeed(lPwmVal,rPwmVal);
+        }
     }
 }
-
-#ifdef MPU6050
-/**
-  * @brief    MPU6050_Sensor_Task 任务函数(未成品)
-  * @brief    通过对MPU6050的数据进行融合计算，得出小车旋转角度
-  */
-void MPU6050_Sensor_Task(void *pvParameters){
-    mpu6050_t mympu6050;
-    while(1){
-        printf("accx=%d  accy=%d  accz=%d\r\n",mympu6050.accX,mympu6050.accY,mympu6050.accZ);
-	    printf("gyroX=%d  gyroY=%d  gyroZ=%d\r\n",mympu6050.gyroX,mympu6050.gyroY,mympu6050.gyroZ);
-        mpu6050_Get_Data(&mympu6050);
-		vTaskDelay(1000);
-    }
-}
-#endif
 
 /**
   * @brief    Ranging_Task 任务函数
@@ -427,9 +420,40 @@ void U1RX_Analyzing_Task(void *pvParameters){
     while (1){
         while(commands[0] != 1);//等待标志位被置1
         BEEP_ENABLE;
-        if(commands[1] == 0xFF){
-            openFlag = commands[2];
+        switch (commands[1]){
+            case 0x00:
+                carMode = 0;
+                Motor_Stop();
+                break;
+            case 0x01:
+                carMode = 1;
+                break;
+            case 0x02:
+                carMode = 0;
+                Motor_SetSpeed(motor_PWMPeriod*0.01*commands[2], motor_PWMPeriod*0.01*commands[3]);
+                break;
+            case 0x03:
+                Motor_Back(motor_PWMPeriod*0.01*commands[2]);
+                break;
+            case 0xFF:
+                if(commands[2] == 0x00 && commands[3] == 0x00){
+                    //收到应答
+                    ackFlag = 1;
+                    break;
+                }
+            default:
+                //指令错误
+                vTaskDelay(100);
+                BEEP_DISABLE;
+                vTaskDelay(100);
+                BEEP_ENABLE;
+                vTaskDelay(100);
+                BEEP_DISABLE;
+                vTaskDelay(100);
+                BEEP_ENABLE;
+                break;
         }
+
         vTaskDelay(100);
         BEEP_DISABLE;
         commands[0] = 0;//清零标志位
@@ -440,7 +464,7 @@ void U1RX_Analyzing_Task(void *pvParameters){
 //T2CCP0的中断服务函数
 void TIMER2A_Handler(void){
     //清除中断标志位
-	TimerIntClear( TIMER2_BASE,  TimerIntStatus( TIMER2_BASE,  true));
+	TimerIntClear(TIMER2_BASE,  TimerIntStatus(TIMER2_BASE, true));
     if(T2CCP0_STA & 0x4000){
         //捕获过一个上升沿，这次是下降沿来了
         T2CCP0_STA |= 0x8000;//标记完成一次高电平脉冲捕获
@@ -456,31 +480,34 @@ void TIMER2A_Handler(void){
     }
 }
 
+//T3CCP0的中断服务函数
+//服务于捕获左轮霍尔编码脉冲
+void TIMER3A_Handler(void){
+    uint32_t flag = TimerIntStatus(TIMER3_BASE, true);
+    if(flag == TIMER_CAPA_EVENT){
+        //累计脉冲数
+        lPulseCounter++;
+    }
+    TimerIntClear(TIMER3_BASE,  flag);
+}
+
 
 //10us级定时器，实现系统计时
 void TIMER0A_Handler(void){
     u8 i;
     static u16 usecond = 0;
     static u16 msecond = 0;
-    static u8 TrigFlag = 0;//当TrigFlag为1时，HC_SR04_TRIG输出高电平并将TrigFlag置0，
-                           //当TrigFlag为0时，HC_SR04_TRIG输出低电平并将TrigFlag置2，
-                           //当TrigFlag为2时，等待TrigFlag重新被置0
-                           //以上三个判断每10us只会判断生效一个
-    static u16 TrigFlagCD = 100;//当TrigFlagCD等于100时，TrigFlag置1(实现的是每100ms获取超声波测距信息)
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
     //ms级计时
     if(usecond == 100){
         usecond = 0;
         //经过了1ms
 
-        if(TrigFlagCD < 100)
-            TrigFlagCD++;
-        else{
-            //激活一次超声波测距模块
-            TrigFlag = 1;
-            TrigFlagCD = 0;
-        }
-
+		if(lPulseCounterTime < 0xFF)
+            lPulseCounterTime++;
+		if(rPulseCounterTime < 0xFF)
+            rPulseCounterTime++;
+		
         if(uart0RXTime < 30){
             uart0RXTime++;
         }
@@ -537,7 +564,7 @@ void TIMER0A_Handler(void){
         }
         msecond++;
     }
-
+	
 	//HC-SR04
 	if((T2CCP0_STA & 0X8000)==0 && (T2CCP0_STA & 0X4000)){
 		//还未完成捕获，但是已经捕获到高电平了
@@ -546,14 +573,6 @@ void TIMER0A_Handler(void){
 			T2CCP0_STA |= 0xFFFF;
 		}
 		else T2CCP0_STA++;
-	}
-    if(TrigFlag == 1){
-        HC_SR04_TRIG_ENABLE;
-		TrigFlag = 0;
-	}
-    else if(TrigFlag == 0){
-        HC_SR04_TRIG_DISABLE;
-        TrigFlag = 2;
 	}
 
     usecond++;

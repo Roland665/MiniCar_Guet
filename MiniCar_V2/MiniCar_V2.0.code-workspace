@@ -18,7 +18,9 @@
             "u8g2_user.h": "c",
             "ganv_track.h": "c",
             "pid.h": "c",
-            "stdlib.h": "c"
+            "stdlib.h": "c",
+            "hc_sr04.h": "c",
+            "mycap.h": "c"
         }
     },
     "extensions": {}
