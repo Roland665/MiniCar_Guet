@@ -4,6 +4,10 @@
 u8 GetDDFlag = 0;   //根据寻迹模块命令特性，当主机发出0xDD命令后，模块此后一直在此命令下工作，
                     //即可以一直读取数字量数据，并且模块上电默认在此命令下工作
                     //当此Flag被置1时，发起读取操作前不需要发送 0xDD 命令
+
+u8 GetAnalogDataFlag = 0;   //根据寻迹模块命令特性，当主机发出0xB0命令后，模块此后一直在此命令下工作，
+                            //即可以一直读取模拟量数据
+                            //当此Flag被置1时，发起读取操作前不需要发送 0xB0 命令
 /**
   * @brief  初始化感为电子的8路寻迹模块使用的IIC模块
   */
@@ -27,6 +31,25 @@ u8 Ganv_Get_DD(void){
     return IIC_Read_One_Byte(I2C2_BASE, GANV_ADDR);
 }
 
+/**
+  * @brief  获取寻迹模拟量数据
+  * @brief  采用手册上的方法一，确保读出的8位模拟量有序对应8个通道
+  * @param  analogDatas: 存放模拟量数据数组
+  * @retval 8位模拟量数据
+  */
+void Ganv_Get_Analog_Data(u8 *analogDatas){
+    IIC_Register_Read_Len_Byte(I2C2_BASE, GANV_ADDR, 0xB0, 8, analogDatas);
+}
+
+/**
+  * @brief  校验感为灰度传感器是否正常工作
+  * @brief  如果总线连接完整，地址正确，I2C 程序无误，给灰度传感器发送 0xAA 命令，灰度传感器将返回 数据 0x66 以证明其工作正常、总线完整。
+  * @param  void
+  * @retval void
+  */
+void Ganv_Ping(void){
+    while(IIC_Register_Read_One_Byte(I2C2_BASE, GANV_ADDR, 0xAA) != 0x66);
+}
 
 /**
   * @brief  计算寻迹数字量的差值

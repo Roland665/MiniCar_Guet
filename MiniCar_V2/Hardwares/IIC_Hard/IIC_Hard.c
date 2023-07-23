@@ -205,6 +205,57 @@ uint8_t IIC_Register_Read_One_Byte(u32 ui32Base, uint16_t target_address, uint16
 	return( I2CMasterDataGet(ui32Base));
 }
 
+/**
+  * @brief    I2C指定寄存器读指定长数据
+  * @param    ui32Base          ：IIC基地址
+  * @param    target_address    ：从机地址
+  * @param    data_address      ：数据源地址
+  * @retval   读取到的数据
+  */
+void IIC_Register_Read_Len_Byte(u32 ui32Base, uint16_t target_address, uint16_t data_address, u8 len, u8 *buf){
+	//specify that we want to communicate to device address with an intended write to bus
+	I2CMasterSlaveAddrSet(ui32Base, target_address, false);
+
+	//put data to be sent into FIFO
+	I2CMasterDataPut(ui32Base, data_address);
+	
+	//send control byte and register address byte to slave device
+	I2CMasterControl(ui32Base, I2C_MASTER_CMD_BURST_SEND_START);// 起始信号+从机地址+应答+从机寄存器+应答
+
+	//wait for MCU to complete send transaction
+	while(I2CMasterBusy(ui32Base));
+
+	//read from the specified slave device
+	I2CMasterSlaveAddrSet(ui32Base, target_address, true);
+
+	//send control byte and read from the register from the MCU
+	I2CMasterControl(ui32Base, I2C_MASTER_CMD_BURST_RECEIVE_START);// 起始信号+从机地址
+
+	//wait while checking for MCU to complete the transaction
+	while(I2CMasterBusy(ui32Base));
+    
+    len--;
+    while(len--){
+        // Get the data from the MCU register
+        I2CMasterControl(ui32Base, I2C_MASTER_CMD_BURST_RECEIVE_CONT);//接收一字节数据
+
+        // wait while checking for MCU to complete the transaction
+        while(I2CMasterBusy(ui32Base));
+
+        // Data storage
+        *buf++ = I2CMasterDataGet(ui32Base);
+    }
+    
+	//Get the lastest data and send stop signal
+	I2CMasterControl(ui32Base, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);// 接收最后一位数据+停止信号
+
+	//wait while checking for MCU to complete the transaction
+	while(I2CMasterBusy(ui32Base));
+
+	//Get the data from the MCU register and return to caller
+	*buf = I2CMasterDataGet(ui32Base);
+}
+
 
 /**
   * @brief  IIC发起一次写操作
