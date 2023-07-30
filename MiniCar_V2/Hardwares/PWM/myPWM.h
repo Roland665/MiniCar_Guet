@@ -4,4 +4,5 @@
 void M0PWM0_Init(u32 PWM_CLKDIV, u16 period);
 void M0PWM1_Init(u32 PWM_CLKDIV, u16 period);
 void M0PWM2_Init(u32 PWM_CLKDIV, u16 period, u16 width);
+void M1PWM4_Init(u32 PWM_CLKDIV, u16 period, u16 width);
 #endif  

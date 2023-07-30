@@ -433,6 +433,11 @@
               <FileType>1</FileType>
               <FilePath>.\Hardwares\IIC_Hard\IIC_Hard.c</FilePath>
             </File>
+            <File>
+              <FileName>key.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardwares\Key\key.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

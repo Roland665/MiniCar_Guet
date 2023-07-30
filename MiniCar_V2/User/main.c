@@ -13,14 +13,13 @@
 #include "MOTOR/motor.h"
 #include "u8g2_user.h"
 #include "Ganv_Track/Ganv_Track.h"
-
+#include "PWM/myPWM.h"
+#include "Key/key.h"
 /*******************************************/
 /*
-@version V2.0
-相较于V1系列
-  - 使用无刷电机配合舵机驱动
-  - 核心mcu换为TM4C123GH6
-  - 
+@version V2.1
+相较于V2.0系列
+  - 几乎更换了所有驱动外部硬件的外设复用，为了方便PCB布线
 
 实现了
   - 
@@ -40,15 +39,15 @@ TaskHandle_t AppCreate_Task_Handle;
 // 任务函数
 void AppCreate_Task(void *pvParameters);
 
-/* U1RX_Analyzing 任务 */
+/* U3RX_Analyzing 任务 */
 // 任务栈深
-#define U1RX_Analyzing_Task_Stack_Deep 128
+#define U3RX_Analyzing_Task_Stack_Deep 128
 // 任务堆栈
-StackType_t U1RX_Analyzing_Task_Stack[U1RX_Analyzing_Task_Stack_Deep];
+StackType_t U3RX_Analyzing_Task_Stack[U3RX_Analyzing_Task_Stack_Deep];
 // 任务句柄
-TaskHandle_t U1RX_Analyzing_Task_Handle;
+TaskHandle_t U3RX_Analyzing_Task_Handle;
 // 任务函数
-void U1RX_Analyzing_Task(void *pvParameters);
+void U3RX_Analyzing_Task(void *pvParameters);
 
 /* LED 任务 */
 // 任务栈深
@@ -112,18 +111,18 @@ void SpeedDetection_Task(void *pvParameters);
 
 /**************************** 全局变量定义区 ********************************/
 float distance = 0;//小车与前方物体间距离(单位cm)
-u16 T2CCP0_STA = 0; //输入捕获状态 bit15表示是否完成一次脉冲捕获，bit14表示是否完成脉冲第一次变化沿，bit13~bit0表示脉冲持续时间(T2CCP0_STA++语句触发周期)
+u16 T0CCP1_STA = 0; //输入捕获状态 bit15表示是否完成一次脉冲捕获，bit14表示是否完成脉冲第一次变化沿，bit13~bit0表示脉冲持续时间(T0CCP1_STA++语句触发周期)
 
-float roll; //绕X轴旋转
-float pitch;//绕Y轴旋转
-float yaw;  //绕Z轴旋转
+int16_t roll; //绕X轴旋转
+int16_t pitch;//绕Y轴旋转
+int16_t yaw;  //绕Z轴旋转
 
 u8 trackState;//循迹8路数字量bit0对应OUT1~bit7对应OUT8
 
-u8 commands[UART1_REC_LEN+1];//Zigbee接收无线命令缓冲区,commands[0]是无线命令是否堆积标志位，置一表示正在堆积
+u8 commands[UART3_REC_LEN+1];//Zigbee接收无线命令缓冲区,commands[0]是无线命令是否堆积标志位，置一表示正在堆积
 
-int16_t lPwmVal;
-int16_t rPwmVal;
+int16_t lPwmVal;// PWM 占空比
+int16_t rPwmVal;// PWM 占空比
 
 u8 carMode = 0;//小车运行模式，0表示外部控制，1表示寻迹模式，2为其他
 
@@ -131,8 +130,8 @@ u8 ackFlag = 0;// 应答标志位，收到应答时置一，处理完归零
 
 u32 lPulseCounter = 0;//左轮编码器脉冲计数器
 u32 rPulseCounter = 0;//右轮编码器脉冲计数器
-u8 lPulseCounterTime = 0xFF;//左轮编码器脉冲计数周期
-u8 rPulseCounterTime = 0xFF;//右轮编码器脉冲计数周期
+u16 lPulseCounterTime = 0xFF;//左轮编码器脉冲计数周期
+u16 rPulseCounterTime = 0xFF;//右轮编码器脉冲计数周期
 
 float lSpeed;
 float rSpeed;
@@ -142,16 +141,17 @@ void setup(void) //串口0初始化
 	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ); //设置系统时钟为80MHz
 	LED_Init();
     BEEP_Init();
-	Uart0_Init(115200);
-	Uart1_Init(115200);
-	Uart2_Init(115200);
+	Uart0_Init(115200);//调试用
+	Uart3_Init(115200);
+	Uart5_Init(115200);//外挂MPU6050模块串口
 	Time0A_Init(800-1);//系统频率为80Mhz，800/80000000=10us,实现10us级中断
 }
 
 int main(void)
 {
 	setup(); // 初始化
-    printf("\r\nProgram is Run-begining\r\n系统时钟频率为%u\r\n",SysCtlClockGet());
+	int Sysclock = SysCtlClockGet();
+    printf("\r\nProgram is Run-begining\r\n系统时钟频率为%u\r\n",Sysclock);
    /* 创建 AppTaskCreate 任务 */
 	xTaskCreate((TaskFunction_t)	AppCreate_Task,       		// 任务函数
 				(const char *)		"AppCreate_Task",       	// 任务名称
@@ -169,13 +169,13 @@ void AppCreate_Task(void *pvParameters)
 {
    taskENTER_CRITICAL(); //进入临界区
                                                
-    //创建 U1RX_Analyzing 任务
-    xTaskCreate((TaskFunction_t)	U1RX_Analyzing_Task,				// 任务函数
-                (const char *)	"U1RX_Analyzing_Task",				    // 任务名称
-                (uint16_t)		U1RX_Analyzing_Task_Stack_Deep,	    // 任务堆栈大小
+    //创建 U3RX_Analyzing 任务
+    xTaskCreate((TaskFunction_t)	U3RX_Analyzing_Task,				// 任务函数
+                (const char *)	"U3RX_Analyzing_Task",				    // 任务名称
+                (uint16_t)		U3RX_Analyzing_Task_Stack_Deep,	    // 任务堆栈大小
                 (void *)			NULL,					// 传递给任务函数的参数
                 (UBaseType_t)	3,						    // 任务优先级
-                (TaskHandle_t *)	&U1RX_Analyzing_Task_Handle);		// 任务句柄
+                (TaskHandle_t *)	&U3RX_Analyzing_Task_Handle);		// 任务句柄
     
     //创建 LED_Task 任务
     xTaskCreate((TaskFunction_t)	LED_Task,				// 任务函数
@@ -230,25 +230,33 @@ void AppCreate_Task(void *pvParameters)
 }
 
 /**
-  * @brief OLED显示任务主体
+  * @brief 测速任务主体
   */
 static void SpeedDetection_Task(void *parameter){
-    T3CCP0_Init();
+    u16 PulseCounterTime_;
+    u16 PulseCounter_;
+    HallEncoder_Cap_Init();
     while(1){
         if(lPulseCounterTime >= 50){
-            //理论上是每50ms计算一次当前速度
-            lSpeed = lPulseCounter*ONEPULSE_FOR_DISTANCE/lPulseCounterTime;//计算出速度，单位是m/s
-            lPulseCounterTime = 0;
+            PulseCounter_ = lPulseCounter;
             lPulseCounter = 0;
+            PulseCounterTime_ = lPulseCounterTime;
+            lPulseCounterTime = 0;
+            //理论上是每50ms计算一次当前速度
+            lSpeed = PulseCounter_*ONEPULSE_FOR_DISTANCE/PulseCounterTime_;//计算出速度，单位是m/s
         }
         if(rPulseCounterTime >= 50){
-            //理论上是每50ms计算一次当前速度
-            rSpeed = rPulseCounter*ONEPULSE_FOR_DISTANCE/rPulseCounterTime;//计算出速度，单位是m/s
-            rPulseCounterTime = 0;
+            PulseCounter_ = rPulseCounter;
             rPulseCounter = 0;
+            PulseCounterTime_ = rPulseCounterTime;
+            rPulseCounterTime = 0;
+            //理论上是每50ms计算一次当前速度
+            rSpeed = PulseCounter_*ONEPULSE_FOR_DISTANCE/PulseCounterTime_;//计算出速度，单位是m/s
         }
         speed = (rSpeed+lSpeed)/2;
-        printf("当前车速为:%.1lfcm/s,左车轮为:%.1lfcm/s,右车轮为:%.1lfcm/s\r\n", speed, lSpeed, rSpeed);
+		if(speed > 0)   
+			printf("当前车速为:%.2lfm/s,左车轮为:%.2lfm/s,右车轮为:%.2lfm/s\r\n", speed, lSpeed, rSpeed);
+        vTaskDelay(30);
     }
 }
 
@@ -265,7 +273,7 @@ static void OLEDShowing_Task(void *parameter)
     u8g2_SetPowerSave(&u8g2, 0); // place 1 means open power-saveing, you`ll see nothing in the screem
     while (1) {
         u8g2_ClearBuffer(&u8g2); // clear the u8g2 buffer
-        if(carMode == 0){
+        if(carMode == 1){
             u8g2_SetFont(&u8g2, u8g2_font_8x13O_mf);
             sprintf(str, "%d %d %d %d %d %d %d %d", (trackState>>7)&1,
                                                     (trackState>>6)&1,
@@ -276,7 +284,8 @@ static void OLEDShowing_Task(void *parameter)
                                                     (trackState>>1)&1, 
                                                     (trackState>>0)&1);
             u8g2_DrawStr(&u8g2, 5, 37, str);
-            sprintf(str, "%d  %d  %d", lPwmVal, rPwmVal, (int)(lSpeed*100));
+            // sprintf(str, "%d  %d  %.2lfm/s", lPwmVal, rPwmVal, speed/100);
+            sprintf(str, "%d  %d  %d", pitch, roll, yaw);
             u8g2_DrawStr(&u8g2, 10, 60, str);
         }
         else{
@@ -294,7 +303,7 @@ static void OLEDShowing_Task(void *parameter)
                     i = 16-1;
                 else
                     i = xTemp;
-                while(i >= 0){          
+                while(i >= 0){
                     u8g2_DrawBox(&u8g2, i*widTemp, j*highTemp, widTemp, highTemp); // 绘制方块
                     i--;
                 }
@@ -329,31 +338,38 @@ static void OLEDShowing_Task(void *parameter)
   */
 void Run_Task(void *pvParameters){
     int8_t trackErr;
-    int16_t commonPwmVal = motor_PWMPeriod*0.4;
+    int16_t commonPwmVal = 20;
     // int8_t lPwmVal = commonPwmVal,rPwmVal = commonPwmVal;
     rPwmVal = commonPwmVal;
     lPwmVal = commonPwmVal;
     int16_t pidResult;
-    PID *trackPID = PID_Position_Create(400,0,0,motor_PWMPeriod,motor_PWMPeriod+7*400);
+    PID *trackPID = PID_Position_Create(10,0,0,100,200);
     Ganv_Track_Init();// 初始化寻迹模块
     Motor_Init();// 初始化电机驱动IO，一个是正反转，一个是PWM调速，周期为3200，初始占空比为0，频率为25Khz
     while(1){
         if(carMode == 1){
-            //Get the track state
-            trackState = Ganv_Get_DD();
-            trackErr = Ganv_Calc_DD_Err(trackState);
-            if(trackErr == 66){
-                rPwmVal = 0;
-                lPwmVal = 0;
-                // lPwmVal = -motor_PWMPeriod*0.4;
-                // rPwmVal = -motor_PWMPeriod*0.4;
+			if(Ganv_Get_Err_State() == 1){
+                //循迹故障
+                //倒车
+                Motor_SetSpeed(-10,-10);
             }
             else{
-                pidResult = PID_Position(trackPID, trackErr);
-                rPwmVal = commonPwmVal + pidResult;
-                lPwmVal = commonPwmVal - pidResult;
-            }        
-            Motor_SetSpeed(lPwmVal,rPwmVal);
+                //Get the track state
+                trackState = Ganv_Get_DD();
+                trackErr = Ganv_Calc_DD_Err(trackState);
+                if(trackErr == 66){
+                    rPwmVal = 0;
+                    lPwmVal = 0;
+                    // lPwmVal = -motor_PWMPeriod*0.4;
+                    // rPwmVal = -motor_PWMPeriod*0.4;
+                }
+                else{
+                    pidResult = PID_Position(trackPID, trackErr);
+                    rPwmVal = commonPwmVal + pidResult;
+                    lPwmVal = commonPwmVal - pidResult;
+                }
+                Motor_SetSpeed(lPwmVal,rPwmVal);
+            }
         }
     }
 }
@@ -364,11 +380,12 @@ void Run_Task(void *pvParameters){
   */
 void Ranging_Task(void *pvParameters){
     u16 ultrasonicTimes = 0;
+	HC_SR04_Init();
     while(1){
-        if(T2CCP0_STA&0x8000){
+        if(T0CCP1_STA&0x8000){
             //完成一次上升沿脉冲捕获
-			ultrasonicTimes = T2CCP0_STA&0x3FFF;
-			T2CCP0_STA = 0;
+			ultrasonicTimes = T0CCP1_STA&0x3FFF;
+			T0CCP1_STA = 0;
 			distance = Filter(ultrasonicTimes*0.17, distance, 0.8);
 			printf("Time=%hu, distance=%.1fcm\r\n",ultrasonicTimes,distance);
         }
@@ -380,16 +397,32 @@ void Ranging_Task(void *pvParameters){
   * @brief    闪烁灯，体现程序正常跑了
   */
 void LED2_Task(void *pvParameters){
+	Key_ALL_Init();
     while (1){
-            LED0_RGB_R_ENABLE;
-            vTaskDelay(200);
-            LED0_RGB_R_DISABLE;
-            LED0_RGB_G_ENABLE;
-            BEEP_DISABLE;
-            vTaskDelay(200);
-            LED0_RGB_B_ENABLE;
-            vTaskDelay(200);
-            LED0_RGB_B_DISABLE;
+		LED0_RGB_B_DISABLE;
+		LED0_RGB_R_ENABLE;
+		vTaskDelay(40);
+		LED0_RGB_R_DISABLE;
+		LED0_RGB_G_ENABLE;
+		vTaskDelay(40);
+		LED0_RGB_G_DISABLE;
+		LED0_RGB_B_ENABLE;
+		vTaskDelay(40);
+		switch(Key_Scan()){
+			case 1://按键1被按下，切换小车模式
+				if(carMode == 0)
+					carMode = 1;
+				else if(carMode == 1){
+					carMode = 0;
+					vTaskDelay(20);
+					Motor_Stop();
+				}
+				break;
+			case 2://未定
+				break;
+			default:
+				break;
+		}
     }
 }
 
@@ -398,31 +431,31 @@ void LED2_Task(void *pvParameters){
   * @brief    闪烁灯，体现程序正常跑了
   */
 void LED_Task(void *pvParameters){
-	
     while (1){
+        LED0_RGB_B_DISABLE;
         LED0_RGB_R_ENABLE;
-        vTaskDelay(1000);
+        vTaskDelay(500);
         LED0_RGB_R_DISABLE;
         LED0_RGB_G_ENABLE;
-        vTaskDelay(1000);
+        vTaskDelay(500);
         LED0_RGB_G_DISABLE;
         LED0_RGB_B_ENABLE;
-        vTaskDelay(1000);
-        LED0_RGB_B_DISABLE;
+        vTaskDelay(500);
     }
 }
 
 /**
-  * @brief    U1RX_Analyzing 任务函数
+  * @brief    U3RX_Analyzing 任务函数
   * @brief    负责处理无线通信传输的数据
   */
-void U1RX_Analyzing_Task(void *pvParameters){
+void U3RX_Analyzing_Task(void *pvParameters){
     while (1){
         while(commands[0] != 1);//等待标志位被置1
         BEEP_ENABLE;
         switch (commands[1]){
             case 0x00:
                 carMode = 0;
+                vTaskDelay(20);
                 Motor_Stop();
                 break;
             case 0x01:
@@ -430,10 +463,15 @@ void U1RX_Analyzing_Task(void *pvParameters){
                 break;
             case 0x02:
                 carMode = 0;
-                Motor_SetSpeed(motor_PWMPeriod*0.01*commands[2], motor_PWMPeriod*0.01*commands[3]);
+                Motor_SetSpeed(commands[2], commands[3]);
                 break;
             case 0x03:
-                Motor_Back(motor_PWMPeriod*0.01*commands[2]);
+                carMode = 0;
+                Motor_Straight(commands[2]);
+                break;
+            case 0x04:
+                carMode = 0;
+                Motor_Back(commands[2]);
                 break;
             case 0xFF:
                 if(commands[2] == 0x00 && commands[3] == 0x00){
@@ -461,34 +499,45 @@ void U1RX_Analyzing_Task(void *pvParameters){
 }
 
 
-//T2CCP0的中断服务函数
-void TIMER2A_Handler(void){
+//T0CCP1的中断服务函数
+void TIMER0B_Handler(void){
     //清除中断标志位
-	TimerIntClear(TIMER2_BASE,  TimerIntStatus(TIMER2_BASE, true));
-    if(T2CCP0_STA & 0x4000){
+	TimerIntClear(TIMER0_BASE,  TimerIntStatus(TIMER0_BASE, true));
+    if(T0CCP1_STA & 0x4000){
         //捕获过一个上升沿，这次是下降沿来了
-        T2CCP0_STA |= 0x8000;//标记完成一次高电平脉冲捕获
-        TimerControlEvent(TIMER2_BASE, TIMER_A, TIMER_EVENT_POS_EDGE); //重新设置为上升沿捕获 
-        T2CCP0_STA &= ~0x4000;//置零
+        T0CCP1_STA |= 0x8000;//标记完成一次高电平脉冲捕获
+        TimerControlEvent(TIMER0_BASE, TIMER_B, TIMER_EVENT_POS_EDGE); //重新设置为上升沿捕获 
+        T0CCP1_STA &= ~0x4000;//置零
     }
     else{
         //第一次捕获上升沿
         //清空，开始计时等待下降沿
-        T2CCP0_STA = 0;
-        T2CCP0_STA |= 0x4000;//标记捕获到了上升沿
-        TimerControlEvent(TIMER2_BASE, TIMER_A, TIMER_EVENT_NEG_EDGE); //设置为下降沿捕获 
+        T0CCP1_STA = 0;
+        T0CCP1_STA |= 0x4000;//标记捕获到了上升沿
+        TimerControlEvent(TIMER0_BASE, TIMER_B, TIMER_EVENT_NEG_EDGE); //设置为下降沿捕获 
     }
 }
 
-//T3CCP0的中断服务函数
-//服务于捕获左轮霍尔编码脉冲
-void TIMER3A_Handler(void){
-    uint32_t flag = TimerIntStatus(TIMER3_BASE, true);
+//T1CCP0的中断服务函数
+//服务于捕获右轮霍尔编码脉冲
+void TIMER1A_Handler(void){
+    uint32_t flag = TimerIntStatus(TIMER1_BASE, true);
     if(flag == TIMER_CAPA_EVENT){
+        //累计脉冲数
+        rPulseCounter++;
+    }
+    TimerIntClear(TIMER1_BASE,  flag);
+}
+
+//T1CCP1的中断服务函数
+//服务于捕获左轮霍尔编码脉冲
+void TIMER1B_Handler(void){
+    uint32_t flag = TimerIntStatus(TIMER1_BASE, true);
+    if(flag == TIMER_CAPB_EVENT){
         //累计脉冲数
         lPulseCounter++;
     }
-    TimerIntClear(TIMER3_BASE,  flag);
+    TimerIntClear(TIMER1_BASE,  flag);
 }
 
 
@@ -503,9 +552,9 @@ void TIMER0A_Handler(void){
         usecond = 0;
         //经过了1ms
 
-		if(lPulseCounterTime < 0xFF)
+		if(lPulseCounterTime < 0xFFFF)
             lPulseCounterTime++;
-		if(rPulseCounterTime < 0xFF)
+		if(rPulseCounterTime < 0xFFFF)
             rPulseCounterTime++;
 		
         if(uart0RXTime < 30){
@@ -526,36 +575,36 @@ void TIMER0A_Handler(void){
             uart0RXTime  = 0xFF; // 把时间拉满，表示没有收到新的消息
         }
 
-        if(uart1RXTime < 50){
-            uart1RXTime++;
+        if(uart3RXTime < 50){
+            uart3RXTime++;
         }
-        else if(uart1RXTime == 50){
+        else if(uart3RXTime == 50){
             // 接收完了一串串口消息
-            if (UART1_RX_BUF[0] == 0xA1 && UART1_RX_BUF[1] == 0xA1 && UART1_RX_BUF[UART1_RX_STA-1] == 0xB1 && UART1_RX_BUF[UART1_RX_STA-2] == 0xB1) {
+            if (UART3_RX_BUF[0] == 0xA1 && UART3_RX_BUF[1] == 0xA1 && UART3_RX_BUF[UART3_RX_STA-1] == 0xB1 && UART3_RX_BUF[UART3_RX_STA-2] == 0xB1) {
                 if(commands[0] == 0){
                     //无线命令缓冲区为空，可以写入数据 
-                    for (i = 0; i < UART1_RX_STA-4; i++) {
-                        commands[1+i] = UART1_RX_BUF[2+i];
+                    for (i = 0; i < UART3_RX_STA-4; i++) {
+                        commands[1+i] = UART3_RX_BUF[2+i];
                     }
                     commands[0] = 1;//无线命令缓冲区非空
                 }
             }
-            UART1_RX_STA = 0;
-            uart1RXTime  = 0xFF; // 把时间拉满，表示没有收到新的消息
+            UART3_RX_STA = 0;
+            uart3RXTime  = 0xFF; // 把时间拉满，表示没有收到新的消息
         }
 
-        if(uart2RXTime < 50){
-            uart2RXTime++;
+        if(uart5RXTime < 20){
+            uart5RXTime++;
         }
-        else if(uart2RXTime == 50){
+        else if(uart5RXTime == 20){
             // 接收完了一串串口消息
-            if (UART2_RX_BUF[0] == 0xA2 && UART2_RX_BUF[1] == 0xA2 && UART2_RX_BUF[5] == 0xB2 && UART2_RX_BUF[6] == 0xB2) {
-                roll = UART2_RX_BUF[2];
-                pitch = UART2_RX_BUF[3];
-                yaw = UART2_RX_BUF[4];
+            if (UART5_RX_BUF[0] == 0xA2 && UART5_RX_BUF[1] == 0xA2 && UART5_RX_BUF[8] == 0xB2 && UART5_RX_BUF[9] == 0xB2) {
+                pitch   = (((int16_t)UART5_RX_BUF[2])<<8)+UART5_RX_BUF[3];
+                roll    = (((int16_t)UART5_RX_BUF[4])<<8)+UART5_RX_BUF[5];
+                yaw     = (((int16_t)UART5_RX_BUF[6])<<8)+UART5_RX_BUF[7];
             }
-            UART2_RX_STA = 0;
-            uart2RXTime  = 0xFF; // 把时间拉满，表示没有收到新的消息
+            UART5_RX_STA = 0;
+            uart5RXTime  = 0xFF; // 把时间拉满，表示没有收到新的消息
         }
 
         if(msecond == 1000){
@@ -566,13 +615,13 @@ void TIMER0A_Handler(void){
     }
 	
 	//HC-SR04
-	if((T2CCP0_STA & 0X8000)==0 && (T2CCP0_STA & 0X4000)){
+	if((T0CCP1_STA & 0X8000)==0 && (T0CCP1_STA & 0X4000)){
 		//还未完成捕获，但是已经捕获到高电平了
-		if((T2CCP0_STA&0X3FFF) >= 0x3FFF){
+		if((T0CCP1_STA&0X3FFF) >= 0x3FFF){
 			//高电平太长了(持续时间大于700*10us)(即距离太远了，就不测了。注意，距离小于5cm也会导致很长的高电平时间，所以这个模块的最短测距大致限制在了5cn)
-			T2CCP0_STA |= 0xFFFF;
+			T0CCP1_STA |= 0xFFFF;
 		}
-		else T2CCP0_STA++;
+		else T0CCP1_STA++;
 	}
 
     usecond++;
@@ -596,40 +645,40 @@ void UART0_Handler(void){
     UARTIntClear(UART0_BASE,flag);
 }
 
-//串口1中断
-void UART1_Handler(void){
-    uint32_t flag = UARTIntStatus(UART1_BASE,true);
+//串口3中断
+void UART3_Handler(void){
+    uint32_t flag = UARTIntStatus(UART3_BASE,true);
     if(flag == UART_INT_RX || flag == UART_INT_RT){
-        while(UARTCharsAvail(UART1_BASE)){
+        while(UARTCharsAvail(UART3_BASE)){
 		    //if FIFO have data
-            if (UART1_RX_STA < UART_REC_LEN) {
-                uart1RXTime = 0;
-                UART1_RX_BUF[UART1_RX_STA] = UARTCharGet(UART1_BASE); // 读取接收到的数据
-                UART1_RX_STA++;
+            if (UART3_RX_STA < UART_REC_LEN) {
+                uart3RXTime = 0;
+                UART3_RX_BUF[UART3_RX_STA] = UARTCharGet(UART3_BASE); // 读取接收到的数据
+                UART3_RX_STA++;
             } else {
-                UART1_RX_STA = 0;
+                UART3_RX_STA = 0;
             }
         }
     }
-    UARTIntClear(UART1_BASE,flag);
+    UARTIntClear(UART3_BASE,flag);
 }
 
-//串口2中断
-void UART2_Handler(void){
-    uint32_t flag = UARTIntStatus(UART2_BASE,true);
+//串口5中断
+void UART5_Handler(void){
+    uint32_t flag = UARTIntStatus(UART5_BASE,true);
     if(flag == UART_INT_RX || flag == UART_INT_RT){
-        while(UARTCharsAvail(UART2_BASE)){
+        while(UARTCharsAvail(UART5_BASE)){
 		    //if FIFO have data
-            if (UART2_RX_STA < UART2_REC_LEN) {
-                uart2RXTime = 0;
-                UART2_RX_BUF[UART2_RX_STA] = UARTCharGet(UART2_BASE); // 读取接收到的数据
-                UART2_RX_STA++;
+            if (UART5_RX_STA < UART5_REC_LEN) {
+                uart5RXTime = 0;
+                UART5_RX_BUF[UART5_RX_STA] = UARTCharGet(UART5_BASE); // 读取接收到的数据
+                UART5_RX_STA++;
             } else {
-                UART2_RX_STA = 0;
+                UART5_RX_STA = 0;
             }
         }
     }
-    UARTIntClear(UART2_BASE,flag);
+    UARTIntClear(UART5_BASE,flag);
 }
 
 

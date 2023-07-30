@@ -9,12 +9,32 @@ u8 GetAnalogDataFlag = 0;   //根据寻迹模块命令特性，当主机发出0xB0命令后，模块此
                             //即可以一直读取模拟量数据
                             //当此Flag被置1时，发起读取操作前不需要发送 0xB0 命令
 /**
-  * @brief  初始化感为电子的8路寻迹模块使用的IIC模块
+  * @brief  初始化驱动感为电子的8路寻迹模块的外设及IO
   */
 void Ganv_Track_Init(void){
-	IIC2_Init();
+    Ganv_Err_IO_Init();
+	IIC1_Init();
 }
 
+/**
+  * @brief  初始化与寻迹模块Err引脚相连的输入IO
+  */
+void Ganv_Err_IO_Init(void){
+    SysCtlPeripheralEnable(GANV_ERR_GPIOPERIPH);
+    GPIODirModeSet(GANV_ERR_GPIO, GANV_ERR_PIN, GPIO_DIR_MODE_IN);
+    GPIOPadConfigSet(GANV_ERR_GPIO,GANV_ERR_PIN,GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);//上拉
+}
+
+/**
+  * @brief  获取寻迹模块Err IO口的状态
+  * @retval 0：无Error
+  * @retval 1：出现Error
+  */
+u8 Ganv_Get_Err_State(void){
+    if(GPIOPinRead(GANV_ERR_GPIO, GANV_ERR_PIN) == GANV_ERR_PIN)
+		return 1;
+	return 0;
+}
 
 /**
   * @brief  获取寻迹数字量数据(Digital Data)
@@ -25,10 +45,10 @@ void Ganv_Track_Init(void){
 u8 Ganv_Get_DD(void){
     if(GetDDFlag == 0){
         //发送0xDD命令
-        IIC_Write_One_Byte(I2C2_BASE, GANV_ADDR, 0xDD);
+        IIC_Write_One_Byte(I2C1_BASE, GANV_ADDR, 0xDD);
 		GetDDFlag = 1;
     }
-    return IIC_Read_One_Byte(I2C2_BASE, GANV_ADDR);
+    return IIC_Read_One_Byte(I2C1_BASE, GANV_ADDR);
 }
 
 /**
@@ -38,7 +58,7 @@ u8 Ganv_Get_DD(void){
   * @retval 8位模拟量数据
   */
 void Ganv_Get_Analog_Data(u8 *analogDatas){
-    IIC_Register_Read_Len_Byte(I2C2_BASE, GANV_ADDR, 0xB0, 8, analogDatas);
+    IIC_Register_Read_Len_Byte(I2C1_BASE, GANV_ADDR, 0xB0, 8, analogDatas);
 }
 
 /**
@@ -48,7 +68,7 @@ void Ganv_Get_Analog_Data(u8 *analogDatas){
   * @retval void
   */
 void Ganv_Ping(void){
-    while(IIC_Register_Read_One_Byte(I2C2_BASE, GANV_ADDR, 0xAA) != 0x66);
+    while(IIC_Register_Read_One_Byte(I2C1_BASE, GANV_ADDR, 0xAA) != 0x66);
 }
 
 /**
@@ -109,7 +129,20 @@ int8_t Ganv_Calc_DD_Err(u8 trackState){
     case 0x7F://01111111
         return -7;
     
-
+	//特殊情况
+	case 0x0F://00001111
+		return -3;//左转直角
+	case 0x07://00000111
+		return -4;//左转直角
+	case 0x03://00000011
+		return -5;//左转直角
+	case 0xF0://11110000
+		return 3;//右转直角
+	case 0xE0://11100000
+		return 4;//右转直角
+	case 0xC0://11000000
+		return 5;//右转直角
+			
     default:
         return 66;
     }

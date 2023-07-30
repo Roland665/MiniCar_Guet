@@ -15,16 +15,16 @@ void Time0A_Init(u16 reloadValue){
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
     
     //配置定时器，将定时器拆分，并配置拆分后的定时器A为周期性计数
-	TimerConfigure( TIMER0_BASE,  TIMER_CFG_SPLIT_PAIR|TIMER_CFG_A_PERIODIC_UP);
+	TimerConfigure(TIMER0_BASE,  TIMER_CFG_SPLIT_PAIR|TIMER_CFG_A_PERIODIC_UP|TIMER_CFG_B_CAP_TIME_UP);
     
     //设置定时器A装载值
-	TimerLoadSet( TIMER0_BASE,  TIMER_A, reloadValue);
+	TimerLoadSet(TIMER0_BASE,  TIMER_A, reloadValue);
     
     //为定时器A注册中断函数
 //	TimerIntRegister( TIMER0_BASE,  TIMER_A, TIMER_IRQHandler);//启动文件中注册完了，不用注册
 
     //设置中断优先级
-	MAP_IntPrioritySet( INT_TIMER0A,  2);
+	MAP_IntPrioritySet(INT_TIMER0A, 3);
 
     //定时器中断允许，中断事件为计数器计数溢出
 	TimerIntEnable(TIMER0_BASE,  TIMER_TIMA_TIMEOUT);
@@ -36,5 +36,5 @@ void Time0A_Init(u16 reloadValue){
     MAP_IntMasterEnable();
 
     //使能定时器
-	TimerEnable( TIMER0_BASE,  TIMER_A);
+	TimerEnable(TIMER0_BASE,  TIMER_A);
 }
