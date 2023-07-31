@@ -59,15 +59,15 @@ TaskHandle_t LED_Task_Handle;
 // 任务函数
 void LED_Task(void *pvParameters);
 
-/* LED2 任务 */
+/* Test 任务 */
 // 任务栈深
-#define LED2_Task_Stack_Deep 128
+#define Test_Task_Stack_Deep 128
 // 任务堆栈
-StackType_t LED2_Task_Stack[LED2_Task_Stack_Deep];
+StackType_t Test_Task_Stack[Test_Task_Stack_Deep];
 // 任务句柄
-TaskHandle_t LED2_Task_Handle;
+TaskHandle_t Test_Task_Handle;
 // 任务函数
-void LED2_Task(void *pvParameters);
+void Test_Task(void *pvParameters);
 
 /* Ranging 任务 */
 // 任务栈深
@@ -109,6 +109,16 @@ TaskHandle_t SpeedDetection_Task_Handle;
 // 任务函数
 void SpeedDetection_Task(void *pvParameters);
 
+/* KeyScan 任务 */
+// 任务栈深
+#define KeyScan_Task_Stack_Deep 256
+// 任务堆栈
+StackType_t KeyScan_Task_Stack[KeyScan_Task_Stack_Deep];
+// 任务句柄
+TaskHandle_t KeyScan_Task_Handle;
+// 任务函数
+void KeyScan_Task(void *pvParameters);
+
 /**************************** 全局变量定义区 ********************************/
 float distance = 0;//小车与前方物体间距离(单位cm)
 u16 T0CCP1_STA = 0; //输入捕获状态 bit15表示是否完成一次脉冲捕获，bit14表示是否完成脉冲第一次变化沿，bit13~bit0表示脉冲持续时间(T0CCP1_STA++语句触发周期)
@@ -136,6 +146,8 @@ u16 rPulseCounterTime = 0xFF;//右轮编码器脉冲计数周期
 float lSpeed;
 float rSpeed;
 float speed;
+
+/**********************片内外设及板载外设初始化函数********************/
 void setup(void) //串口0初始化
 {
 	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ); //设置系统时钟为80MHz
@@ -146,6 +158,7 @@ void setup(void) //串口0初始化
 	Uart5_Init(115200);//外挂MPU6050模块串口
 	Time0A_Init(800-1);//系统频率为80Mhz，800/80000000=10us,实现10us级中断
 }
+
 
 int main(void)
 {
@@ -162,7 +175,7 @@ int main(void)
 
    printf("=====准备进入FreeRTOS!=====\r\n");
    vTaskStartScheduler(); /* 开启调度器 */
-    while (1);//理论上执行不到这句话
+    while (1);//理论上执行不到这一行
 }
 
 void AppCreate_Task(void *pvParameters)
@@ -170,12 +183,12 @@ void AppCreate_Task(void *pvParameters)
    taskENTER_CRITICAL(); //进入临界区
                                                
     //创建 U3RX_Analyzing 任务
-    xTaskCreate((TaskFunction_t)	U3RX_Analyzing_Task,				// 任务函数
-                (const char *)	"U3RX_Analyzing_Task",				    // 任务名称
+    xTaskCreate((TaskFunction_t)	U3RX_Analyzing_Task,			// 任务函数
+                (const char *)	"U3RX_Analyzing_Task",				// 任务名称
                 (uint16_t)		U3RX_Analyzing_Task_Stack_Deep,	    // 任务堆栈大小
-                (void *)			NULL,					// 传递给任务函数的参数
-                (UBaseType_t)	3,						    // 任务优先级
-                (TaskHandle_t *)	&U3RX_Analyzing_Task_Handle);		// 任务句柄
+                (void *)			NULL,					        // 传递给任务函数的参数
+                (UBaseType_t)	3,						            // 任务优先级
+                (TaskHandle_t *)	&U3RX_Analyzing_Task_Handle);	// 任务句柄
     
     //创建 LED_Task 任务
     xTaskCreate((TaskFunction_t)	LED_Task,				// 任务函数
@@ -185,13 +198,13 @@ void AppCreate_Task(void *pvParameters)
                 (UBaseType_t)	3,						    // 任务优先级
                 (TaskHandle_t *)	&LED_Task_Handle);		// 任务句柄
 
-    //创建 LED2_Task 任务
-    xTaskCreate((TaskFunction_t)	LED2_Task,				// 任务函数
-                (const char *)	"LED2_Task",				// 任务名称
-                (uint16_t)		LED2_Task_Stack_Deep,	    // 任务堆栈大小
+    //创建 Test_Task 任务
+    xTaskCreate((TaskFunction_t)	Test_Task,				// 任务函数
+                (const char *)	"Test_Task",				// 任务名称
+                (uint16_t)		Test_Task_Stack_Deep,	    // 任务堆栈大小
                 (void *)			NULL,					// 传递给任务函数的参数
                 (UBaseType_t)	3,						    // 任务优先级
-                (TaskHandle_t *)	&LED2_Task_Handle);		// 任务句柄
+                (TaskHandle_t *)	&Test_Task_Handle);		// 任务句柄
 
     //创建 Ranging_Task 任务
     xTaskCreate((TaskFunction_t)	Ranging_Task,				// 任务函数
@@ -223,7 +236,15 @@ void AppCreate_Task(void *pvParameters)
                 (uint16_t)		SpeedDetection_Task_Stack_Deep,	    // 任务堆栈大小
                 (void *)			NULL,					        // 传递给任务函数的参数
                 (UBaseType_t)	3,						            // 任务优先级
-                (TaskHandle_t *)	&SpeedDetection_Task_Handle);	// 任务句柄 
+                (TaskHandle_t *)	&SpeedDetection_Task_Handle);	// 任务句柄
+                
+    //创建 KeyScan_Task 任务
+    xTaskCreate((TaskFunction_t)	KeyScan_Task,		    // 任务函数
+                (const char *)	"KeyScan_Task",				// 任务名称
+                (uint16_t)		KeyScan_Task_Stack_Deep,	// 任务堆栈大小
+                (void *)			NULL,					// 传递给任务函数的参数
+                (UBaseType_t)	3,						    // 任务优先级
+                (TaskHandle_t *)	&KeyScan_Task_Handle);	// 任务句柄 
 
     vTaskDelete(AppCreate_Task_Handle);//删除 AppCreate 任务
     taskEXIT_CRITICAL();//退出临界区
@@ -393,21 +414,12 @@ void Ranging_Task(void *pvParameters){
 }
 
 /**
-  * @brief    LED2_Task 任务函数
-  * @brief    闪烁灯，体现程序正常跑了
+  * @brief    KeyScan_Task 任务函数
+  * @brief    按键检测任务，试试扫描板载按键是否有被按下
   */
-void LED2_Task(void *pvParameters){
+void KeyScan_Task(void *pvParameters){
 	Key_ALL_Init();
     while (1){
-		LED0_RGB_B_DISABLE;
-		LED0_RGB_R_ENABLE;
-		vTaskDelay(40);
-		LED0_RGB_R_DISABLE;
-		LED0_RGB_G_ENABLE;
-		vTaskDelay(40);
-		LED0_RGB_G_DISABLE;
-		LED0_RGB_B_ENABLE;
-		vTaskDelay(40);
 		switch(Key_Scan()){
 			case 1://按键1被按下，切换小车模式
 				if(carMode == 0)
@@ -423,6 +435,24 @@ void LED2_Task(void *pvParameters){
 			default:
 				break;
 		}
+    }
+}
+
+/**
+  * @brief    Test_Task 任务函数
+  * @brief    测试某项功能的任务，用于临时测试某个任务，也可以作为一个临时任务的容器
+  */
+void Test_Task(void *pvParameters){
+    while (1){
+		LED0_RGB_B_DISABLE;
+		LED0_RGB_R_ENABLE;
+		vTaskDelay(40);
+		LED0_RGB_R_DISABLE;
+		LED0_RGB_G_ENABLE;
+		vTaskDelay(40);
+		LED0_RGB_G_DISABLE;
+		LED0_RGB_B_ENABLE;
+		vTaskDelay(40);
     }
 }
 
