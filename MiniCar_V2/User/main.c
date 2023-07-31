@@ -136,6 +136,8 @@ u16 rPulseCounterTime = 0xFF;//右轮编码器脉冲计数周期
 float lSpeed;
 float rSpeed;
 float speed;
+
+/**********************片内外设及板载外设初始化函数********************/
 void setup(void) //串口0初始化
 {
 	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ); //设置系统时钟为80MHz
@@ -146,6 +148,7 @@ void setup(void) //串口0初始化
 	Uart5_Init(115200);//外挂MPU6050模块串口
 	Time0A_Init(800-1);//系统频率为80Mhz，800/80000000=10us,实现10us级中断
 }
+
 
 int main(void)
 {
@@ -162,7 +165,7 @@ int main(void)
 
    printf("=====准备进入FreeRTOS!=====\r\n");
    vTaskStartScheduler(); /* 开启调度器 */
-    while (1);//理论上执行不到这句话
+    while (1);//理论上执行不到这一行
 }
 
 void AppCreate_Task(void *pvParameters)
