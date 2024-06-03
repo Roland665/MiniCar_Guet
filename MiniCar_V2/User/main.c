@@ -15,6 +15,10 @@
 #include "Ganv_Track/Ganv_Track.h"
 #include "PWM/myPWM.h"
 #include "Key/key.h"
+
+#include "LCD/lcd_init.h"
+#include "LCD/lcd.h"
+#include "LCD/pic.h"
 /*******************************************/
 /*
 @version V2.1
@@ -101,7 +105,7 @@ void OLEDShowing_Task(void *pvParameters);
 
 /* SpeedDetection 任务 */
 // 任务栈深
-#define SpeedDetection_Task_Stack_Deep 256
+#define SpeedDetection_Task_Stack_Deep 128
 // 任务堆栈
 StackType_t SpeedDetection_Task_Stack[SpeedDetection_Task_Stack_Deep];
 // 任务句柄
@@ -111,7 +115,7 @@ void SpeedDetection_Task(void *pvParameters);
 
 /* KeyScan 任务 */
 // 任务栈深
-#define KeyScan_Task_Stack_Deep 256
+#define KeyScan_Task_Stack_Deep 128
 // 任务堆栈
 StackType_t KeyScan_Task_Stack[KeyScan_Task_Stack_Deep];
 // 任务句柄
@@ -151,6 +155,9 @@ float speed;
 void setup(void) //串口0初始化
 {
 	SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ); //设置系统时钟为80MHz
+//    M0PWM0_Init(SYSCTL_PWMDIV_64, 25000);
+//    PWMPulseWidthSet(PWM0_BASE, PWM_OUT_0, 25000*0.025);
+//    while(1);
 	LED_Init();
     BEEP_Init();
 	Uart0_Init(115200);//调试用
@@ -158,7 +165,6 @@ void setup(void) //串口0初始化
 	Uart5_Init(115200);//外挂MPU6050模块串口
 	Time0A_Init(800-1);//系统频率为80Mhz，800/80000000=10us,实现10us级中断
 }
-
 
 int main(void)
 {
@@ -359,11 +365,12 @@ static void OLEDShowing_Task(void *parameter)
   */
 void Run_Task(void *pvParameters){
     int8_t trackErr;
-    int16_t commonPwmVal = 20;
+    int16_t commonPwmVal = 30;
     // int8_t lPwmVal = commonPwmVal,rPwmVal = commonPwmVal;
     rPwmVal = commonPwmVal;
     lPwmVal = commonPwmVal;
     int16_t pidResult;
+	
     PID *trackPID = PID_Position_Create(10,0,0,100,200);
     Ganv_Track_Init();// 初始化寻迹模块
     Motor_Init();// 初始化电机驱动IO，一个是正反转，一个是PWM调速，周期为3200，初始占空比为0，频率为25Khz
@@ -379,8 +386,8 @@ void Run_Task(void *pvParameters){
                 trackState = Ganv_Get_DD();
                 trackErr = Ganv_Calc_DD_Err(trackState);
                 if(trackErr == 66){
-                    rPwmVal = 0;
-                    lPwmVal = 0;
+                    rPwmVal = -15;
+                    lPwmVal = -15;
                     // lPwmVal = -motor_PWMPeriod*0.4;
                     // rPwmVal = -motor_PWMPeriod*0.4;
                 }
@@ -444,15 +451,24 @@ void KeyScan_Task(void *pvParameters){
   */
 void Test_Task(void *pvParameters){
     while (1){
-		LED0_RGB_B_DISABLE;
-		LED0_RGB_R_ENABLE;
-		vTaskDelay(40);
-		LED0_RGB_R_DISABLE;
-		LED0_RGB_G_ENABLE;
-		vTaskDelay(40);
-		LED0_RGB_G_DISABLE;
-		LED0_RGB_B_ENABLE;
-		vTaskDelay(40);
+		// LED0_RGB_B_DISABLE;
+		// LED0_RGB_R_ENABLE;
+		// vTaskDelay(40);
+		// LED0_RGB_R_DISABLE;
+		// LED0_RGB_G_ENABLE;
+		// vTaskDelay(40);
+		// LED0_RGB_G_DISABLE;
+		// LED0_RGB_B_ENABLE;
+		// vTaskDelay(40);
+
+//        LCD_Init();//LCD初始化
+//        LCD_Fill(0,0,LCD_W,LCD_H,WHITE);	
+//        while(1)
+//        {
+//            LCD_ShowPicture(0,0,120,120,gImage_pictu);//
+//            LCD_ShowChinese(0,130,"中景园电子",RED,WHITE,16,0);//        
+
+//        }
     }
 }
 

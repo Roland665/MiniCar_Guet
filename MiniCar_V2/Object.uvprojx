@@ -438,6 +438,16 @@
               <FileType>1</FileType>
               <FilePath>.\Hardwares\Key\key.c</FilePath>
             </File>
+            <File>
+              <FileName>lcd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardwares\LCD\lcd.c</FilePath>
+            </File>
+            <File>
+              <FileName>lcd_init.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardwares\LCD\lcd_init.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
